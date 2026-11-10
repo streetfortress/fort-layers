@@ -1,0 +1,44 @@
+# The layers' own checks: the kit and every role binary are vetted and
+# tested on the checkout, and the flake builds every role. An estate's
+# gate runs a role's check at the pin it holds (`nix run
+# ./nixos#fort-<role> -- check --all`, the step fort layer add appends);
+# here the binaries are what is tested.
+name: checks
+
+on:
+  push:
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+          token: ${{ secrets.CONNECTION_PAT }}
+
+      - name: Vet + test the kit and the roles
+        run: |
+          set -euo pipefail
+          test -z "$(gofmt -l .)" || { gofmt -l .; echo "::error::gofmt"; exit 1; }
+          go vet ./...
+          go test ./...
+
+  nix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: DeterminateSystems/nix-installer-action@v16
+
+      - name: Every role builds, and the modules parse
+        run: |
+          set -euo pipefail
+          nix eval --json .#nixosModules --apply builtins.attrNames
+          if [ -d modules ]; then
+            for m in $(find modules -name "*.nix"); do nix-instantiate --parse "$m" >/dev/null; done
+          fi
+          nix build --no-link --print-out-paths .#unwrapped

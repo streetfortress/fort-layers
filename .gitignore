@@ -1,0 +1,7 @@
+result
+result-*
+# go build ./cmd/<role> artifacts at the repo root
+/fort-backups
+/fort-ca
+/fort-monitoring
+/fort-s3

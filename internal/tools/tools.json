@@ -1,0 +1,14 @@
+{
+  "$comment": "The layers' tool dependencies as one declared set, the shape of sfi/forts#25. Two readers: internal/tools checks for a tool at run time and names a missing one, and flake.nix puts the packaged set on every role binary's wrapper PATH and in devShells.default. `packaged` maps a binary to the nixpkgs attribute path that carries it. `ambient` is the binary the host must own: `attr` is what an operator installs it from, `why` is the reason the closure must not carry it. Declare a tool here before you exec it.",
+  "packaged": {
+    "git": "git",
+    "sops": "sops",
+    "kustomize": "kustomize"
+  },
+  "ambient": {
+    "nix": {
+      "attr": "nix",
+      "why": "it is the client of the host's own daemon; a role that runs it does so to build or to run a flake output the host already trusts"
+    }
+  }
+}
