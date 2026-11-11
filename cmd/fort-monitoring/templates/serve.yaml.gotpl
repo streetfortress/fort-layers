@@ -1,0 +1,72 @@
+# {{ .Hub }} is this estate's monitoring hub (forts#38): this is its
+# subscription to what the estate asks of it. Each fort renders what the
+# hub has to know about it — the dead man's switch, the Loki rule, the
+# edge Alertmanager as a Grafana datasource, a plain fort's scrape
+# target — into flux/hub/{{ .Hub }}/, one file per fort, and this
+# Kustomization applies that directory here. Flux is the reconciler: a
+# fort the estate dismantles leaves monitoring-central by prune, and no
+# hand writes into the hub's tree.
+#
+# Rendered by `fort monitoring scaffold {{ .Hub }}` from estate.toml
+# ([hubs.monitoring]); `fort monitoring check --all` requires it.
+# Scaffolding never overwrites this file. A layer built on this one adds
+# its own subscriptions beside this file, for estates served across
+# repos.
+#
+# The tenant: a service account that can write what a fort's file
+# carries — PrometheusRule, ScrapeConfig, ConfigMap — in monitoring-central
+# and nothing else (flux multi-tenancy). A file that names another
+# namespace or another kind fails to apply, which is the guard.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: hub-{{ .Name }}
+  namespace: monitoring-central
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: hub-{{ .Name }}
+  namespace: monitoring-central
+rules:
+  - apiGroups: ["monitoring.coreos.com"]
+    resources: ["prometheusrules", "scrapeconfigs"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: hub-{{ .Name }}
+  namespace: monitoring-central
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: hub-{{ .Name }}
+subjects:
+  - kind: ServiceAccount
+    name: hub-{{ .Name }}
+    namespace: monitoring-central
+---
+# The subscription: flux/hub/{{ .Hub }}/ of this repo, applied as the
+# tenant above through the estate's own flux source.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: hub-{{ .Name }}
+  namespace: monitoring-central
+spec:
+  interval: 10m
+  retryInterval: 2m
+  timeout: 5m
+  serviceAccountName: hub-{{ .Name }}
+  sourceRef:
+    kind: GitRepository
+    # this estate's own source: the FluxInstance's GitRepository
+    name: flux-system
+    namespace: flux-system
+  path: ./flux/hub/{{ .Hub }}
+  prune: true
+  wait: false

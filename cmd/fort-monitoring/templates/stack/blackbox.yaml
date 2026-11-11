@@ -1,0 +1,60 @@
+# blackbox-exporter: the probe target for an estate's HTTPS and ICMP
+# checks. The role ships the prober and no targets: a probe is a
+# ScrapeConfig the estate adds beside this file, labeled
+# monitoring.sfi/scope: central, with metricsPath /probe and the
+# __address__ relabelled to blackbox-exporter.monitoring-central.svc.cluster.local:9115.
+# Chart defaults: https://github.com/prometheus-community/helm-charts/blob/main/charts/prometheus-blackbox-exporter/values.yaml
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: prometheus-community
+  namespace: flux-system
+spec:
+  interval: 1h
+  url: https://prometheus-community.github.io/helm-charts
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: blackbox-exporter
+  namespace: monitoring-central
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: prometheus-blackbox-exporter
+      version: 11.18.0 # app v0.28.0
+      sourceRef:
+        kind: HelmRepository
+        name: prometheus-community
+        namespace: flux-system
+  values:
+    fullnameOverride: blackbox-exporter
+
+    config:
+      modules:
+        https_2xx:
+          prober: http
+          timeout: 5s
+          http:
+            headers:
+              User-Agent: Blackbox-Exporter
+            tls_config:
+              insecure_skip_verify: false
+            fail_if_not_ssl: true
+        http_2xx:
+          prober: http
+          timeout: 5s
+          http:
+            headers:
+              User-Agent: Blackbox-Exporter
+        icmp:
+          prober: icmp
+          timeout: 5s
+
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        memory: 128Mi

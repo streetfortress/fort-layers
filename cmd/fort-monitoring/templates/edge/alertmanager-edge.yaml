@@ -1,0 +1,29 @@
+# Edge Alertmanager (forts#53): one replica, the receiver the committed
+# config names. Pages even when the mesh (and therefore any hub) is down
+# — that's the whole point of the edge stack.
+# Config comes from the committed Secret alertmanager-edge
+# (alertmanager-config.yaml beside this file; a notifier is an opt-in
+# edit there, and its secret mounts through spec.secrets).
+apiVersion: monitoring.coreos.com/v1
+kind: Alertmanager
+metadata:
+  name: edge
+  namespace: monitoring
+spec:
+  # Notification links point at the mesh NodePort (forts#137), not the pod.
+  externalUrl: http://${MESH_IP}:30993
+  replicas: 1
+  retention: 120h
+  storage:
+    volumeClaimTemplate:
+      spec:
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 1Gi
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 128Mi

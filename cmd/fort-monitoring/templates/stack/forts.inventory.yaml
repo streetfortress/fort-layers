@@ -1,0 +1,13 @@
+# Machine-readable seeding contract — NON-SECRET: describes where each
+# key's value comes from. fort monitoring mint executes it; the file is
+# the record either way. The Alertmanager's config is NOT here: it is
+# committed in the clear (alertmanager-config.yaml), and the opt-in
+# webhook secret is the estate's own edit, documented there.
+secrets:
+  grafana-admin.sops.yaml:
+    metadata:
+      name: grafana-admin
+      namespace: monitoring-central
+    keys:
+      admin-user: {literal: admin}
+      admin-password: {generate: hex24}

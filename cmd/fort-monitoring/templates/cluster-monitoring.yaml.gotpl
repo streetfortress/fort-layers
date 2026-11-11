@@ -1,0 +1,92 @@
+# {{ .Fort }}'s per-cluster monitoring for the hub (forts#38, #288) —
+# rendered by `fort monitoring scaffold` from the manifest (mesh_ip) into
+# flux/hub/{{ .Hub }}/ of this estate, removed by `fort monitoring
+# dismantle`; `fort monitoring check --all` requires one per fort. The
+# hub subscribes to the directory with flux. Everything the hub has to
+# know about ONE cluster lives here, so no fort is configured outside its
+# own -keyed paths and nothing is written into the hub's tree: the dead
+# man's switch for its metrics stream, the log analog, and its edge
+# Alertmanager as a Grafana datasource. The backup leg a pv block
+# promises is the backups role's rule, in its own file beside this one.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: cluster-{{ .Fort }}
+  namespace: monitoring-central
+  labels:
+    monitoring.sfi/scope: central
+spec:
+  groups:
+    - name: cluster-{{ .Fort }}
+      rules:
+        # absent(): when an edge stops remote-writing, its series go
+        # stale and vanish — an expression over the missing data cannot
+        # fire, only absent() can. It keys on cluster alone: absent()
+        # has no by clause, and the fort's name is the identity. The
+        # alert carries the estate's name as a label (forts#50) so the
+        # hub's Alertmanager can route or group a silent fort by estate.
+        - alert: ClusterStreamSilent
+          expr: absent(up{cluster="{{ .Fort }}"})
+          for: 10m
+          labels:
+            severity: critical
+            cluster: {{ .Fort }}
+            estate: {{ .Estate }}
+          annotations:
+            summary: "No data from {{ .Fort }}'s edge Prometheus"
+---
+# Log analog of the dead man's switch, synced into the Loki ruler by the
+# chart's rules sidecar (any ConfigMap labeled loki_rule). Warning: the
+# metrics switch is the critical cluster-down page; this one says "logs
+# broke" as distinct from "cluster broke".
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loki-rules-{{ .Fort }}
+  namespace: monitoring-central
+  labels:
+    loki_rule: "1"
+data:
+  {{ .Fort }}.yaml: |
+    groups:
+      - name: cluster-{{ .Fort }}
+        rules:
+          - alert: LogStreamSilent
+            expr: absent_over_time({job="fluent-bit", cluster="{{ .Fort }}"}[15m])
+            for: 5m
+            labels:
+              severity: warning
+              cluster: {{ .Fort }}
+              estate: {{ .Estate }}
+            annotations:
+              summary: No container logs from {{ .Fort }} for 15m — fluent-bit or Loki ingest broken
+---
+# The cluster's edge Alertmanager as a Grafana datasource (the
+# datasources sidecar: any ConfigMap labeled grafana_datasource), so
+# Grafana's Alerting → Silences page is the single pane for silences
+# across the fleet. Silences are PER-AM: an alert firing from three edges
+# needs three silences.
+{{- if .IsHub }}
+# The hub's own edge, via cluster DNS.
+{{- else }}
+# Over the mesh: the edge's NodePort 30993 (the core's
+# mesh-services-edge.yaml); grafana's pod egress rides the hub's mesh
+# interface (its own, or its link to this estate).
+{{- end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasource-{{ .Fort }}
+  namespace: monitoring-central
+  labels:
+    grafana_datasource: "1"
+data:
+  alertmanager-{{ .Fort }}.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Alertmanager Edge ({{ .Fort }})
+        type: alertmanager
+        uid: am-edge-{{ .Fort }}
+        url: {{ if .IsHub }}http://alertmanager-operated.monitoring.svc.cluster.local:9093{{ else }}http://{{ .MeshIP }}:30993{{ end }}
+        jsonData:
+          implementation: prometheus

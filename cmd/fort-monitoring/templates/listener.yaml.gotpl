@@ -1,0 +1,17 @@
+# https listener for {{ .Host }} — appended to the Gateway by the patch
+# entry in kustomization.yaml; the certificate is certificate-{{ .Name }}.yaml,
+# the route is in ../monitoring-central/. fort monitoring scaffold {{ .Fort }} wrote it.
+- op: add
+  path: /spec/listeners/-
+  value:
+    name: https-{{ .Name }}
+    port: 8443
+    protocol: HTTPS
+    hostname: {{ .Host }}
+    tls:
+      mode: Terminate
+      certificateRefs:
+        - name: {{ .Name }}-tls
+    allowedRoutes:
+      namespaces:
+        from: All

@@ -1,0 +1,29 @@
+# The edge stack's list (fort-layers#3), rendered once per estate by
+# fort monitoring scaffold into the shared infrastructure layer: every
+# cluster fort applies it. The core renders no observability (forts#270);
+# this directory is the layer's.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - prometheus-edge.yaml
+  - alertmanager-edge.yaml
+  - alertmanager-config.yaml
+  - servicemonitors.yaml
+  - podmonitors.yaml
+  - node-exporter.yaml
+  - rules-edge.yaml
+  - mesh-services-edge.yaml
+  - ops-read.yaml
+{{- if .Push }}
+
+# The push (layers/monitoring/estate.toml [push] metrics): a patch on the
+# edge Prometheus, so the rendered file above is never edited.
+patches:
+  - path: push-metrics.yaml
+    target:
+      group: monitoring.coreos.com
+      version: v1
+      kind: Prometheus
+      name: edge
+      namespace: monitoring
+{{- end }}

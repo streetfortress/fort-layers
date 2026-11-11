@@ -1,0 +1,48 @@
+# The central Alertmanager's config, committed in the clear
+# (fort-layers#3's shape, at the hub): nothing in the default is a
+# secret, so a route change is a readable PR diff. The operator reads the
+# Secret alertmanager-<name> — here alertmanager-central — key
+# alertmanager.yaml.
+#
+# The default route delivers to a receiver with no integration: alerts
+# land in this Alertmanager's UI and in Grafana (Alerting → the
+# Alertmanager Central datasource), and a fresh hub reconciles green with
+# no hand-written file. Grouped by alert name and cluster, so a
+# fleet-wide alert is one notification per fort and a fort's burst is
+# one. A notifier is an opt-in edit of this file plus one secret:
+#
+#   1. The secret: one key, `url`, encrypted under this fort's own sops
+#      rule (the hub cluster is the only reader):
+#        flux/apps/{{ .Fort }}/monitoring-central/alertmanager-webhook.sops.yaml
+#        (kind Secret, name alertmanager-webhook, namespace
+#        monitoring-central, stringData: url: <the webhook URL>)
+#      and list it in the stack's kustomization.
+#   2. The mount: add to the Alertmanager CR (alertmanager-central.yaml)
+#        spec.secrets: [alertmanager-webhook]
+#      The mount is part of the opt-in, not the default: a named-but-
+#      missing Secret blocks the pod.
+#   3. The receiver — every common target speaks webhook:
+#        receivers:
+#          - name: notify
+#            webhook_configs:
+#              - url_file: /etc/alertmanager/secrets/alertmanager-webhook/url
+#                send_resolved: true
+#      and route.receiver: notify. Discord is discord_configs with
+#      webhook_url_file, Slack is slack_configs with api_url_file — the
+#      same file, the same mount.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: alertmanager-central
+  namespace: monitoring-central
+type: Opaque
+stringData:
+  alertmanager.yaml: |
+    route:
+      receiver: none
+      group_by: [alertname, cluster]
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
+    receivers:
+      - name: none

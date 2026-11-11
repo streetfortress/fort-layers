@@ -21,4 +21,4 @@ checkout, and `nix build .#fort-<role>` is the binary an estate pins.
 
 | role | binary | docs | state |
 |---|---|---|---|
-| | | | |
+| monitoring | `fort-monitoring` | [docs/monitoring.md](docs/monitoring.md) | the reference layer: the edge stack on every cluster fort, and a one-estate hub |

@@ -1,0 +1,26 @@
+# The monitoring layer's push (fort-layers, layers/monitoring/
+# estate.toml [push] metrics = true): the edge Prometheus remote-writes
+# every series it scrapes to the hub's central Prometheus — NodePort
+# 30990 on the hub's mesh address, HUB_MESH_IP from this cluster's
+# cluster-vars (the [hubs.monitoring] fort's address on this mesh, which
+# fort monitoring scaffold adds there). The mesh IP, not a name: a dual
+# A record only survives here because Go's dialer retries every answer,
+# and the paging-critical path should not depend on client dialer
+# behaviour (the same ambiguity broke fluent-bit outright).
+#
+# A kustomize patch, not an edit of the core's prometheus-edge.yaml:
+# the core renders that file and knows no layer by name (forts'
+# docs/layers.md), so the layer adds its field from a file of its own.
+# An estate with no hub has no such file: the edge keeps its own
+# retention and nothing else. The series leave the fort with the two
+# identity labels the core stamps (externalLabels: cluster, estate), and
+# the hub trusts them — the push carries no authentication (forts#79);
+# the mesh is the boundary.
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: edge
+  namespace: monitoring
+spec:
+  remoteWrite:
+    - url: http://${HUB_MESH_IP}:30990/api/v1/write

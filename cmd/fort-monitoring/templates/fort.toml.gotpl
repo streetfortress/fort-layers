@@ -1,0 +1,22 @@
+# {{ .Fort }}: watched by the monitoring hub {{ .Hub }} (estate.toml
+# [hubs.monitoring]). fort monitoring scaffold wrote this file; the hub's
+# render of the fort is flux/hub/{{ .Hub }}/{{ .Fort }}.yaml. An empty table is the
+# whole declaration for a watched fort.
+[monitoring]
+{{- if .IsHub }}
+
+# This fort SERVES the role (estate.toml: {{ .Why }}): the central stack
+# renders from this table — the central Prometheus, Loki, Grafana, the
+# central Alertmanager, and the subscription to flux/hub/{{ .Fort }}/.
+# Refine it, then run fort monitoring scaffold {{ .Fort }} again: the
+# first run wrote this file and stopped here.
+[monitoring.hub]
+hostname = "{{ .Hostname }}"   # grafana.<hostname> on the fort's Gateway
+
+# How long the hub keeps what it receives: the central Prometheus's local
+# TSDB and Loki's filesystem store. The fort's disk is the horizon; a
+# layer built on this one that adds an object store owns longer ones.
+[monitoring.hub.retention]
+metrics = "30d"
+logs = "30d"
+{{- end }}

@@ -1,0 +1,147 @@
+# Loki 3.x: single binary, TSDB index, chunks on the filesystem — the
+# fort's disk is the horizon, as for the central Prometheus. A layer
+# built on this one that wants an object store swaps the storage block by
+# patch. The push endpoint is on the mesh via mesh-services.yaml; every
+# watched cluster's fluent-bit ships to it.
+# Chart defaults: https://github.com/grafana/loki/blob/main/production/helm/loki/values.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: loki
+  namespace: monitoring-central
+spec:
+  interval: 1h
+  timeout: 10m
+  chart:
+    spec:
+      chart: loki
+      version: 7.3.0 # app 3.6.12
+      sourceRef:
+        kind: HelmRepository
+        name: grafana
+        namespace: flux-system
+  values:
+    deploymentMode: SingleBinary
+
+    # Scraped by the edge Prometheus (serviceMonitorSelector {}) on the
+    # http-metrics port; job lands as monitoring-central/loki. The chart's
+    # ServiceMonitor relabels cluster=<clusterLabel> onto every series,
+    # and remote_write does NOT overwrite a label the series already
+    # carries — left at the default (the release name, "loki") the hub's
+    # own cluster identity would be lost for exactly this job. Pin it to
+    # the cluster-var so it matches the external label.
+    clusterLabelOverride: ${CLUSTER_NAME}
+    monitoring:
+      serviceMonitor:
+        enabled: true
+
+    loki:
+      auth_enabled: false
+      commonConfig:
+        replication_factor: 1
+      schemaConfig:
+        configs:
+          - from: "2026-01-01"
+            store: tsdb
+            object_store: filesystem
+            schema: v13
+            index:
+              prefix: index_
+              period: 24h
+      storage:
+        type: filesystem
+      limits_config:
+        retention_period: {{ .Logs }}
+        # Native OTLP ingest (/otlp/v1/logs): a host with no k3s can push
+        # its journal this way. Which resource attributes become index
+        # labels is decided HERE, not on the sender: the stream identity
+        # (job, cluster, host — what fluent-bit ships) plus a task
+        # attribution pair (repo, issue) for dispatch-shaped senders.
+        # Everything else a resource or log record carries is structured
+        # metadata: filterable, not a stream.
+        otlp_config:
+          resource_attributes:
+            attributes_config:
+              - action: index_label
+                attributes:
+                  - job
+                  - cluster
+                  - host
+                  - repo
+                  - issue
+      # retention_period is inert without the compactor actually enforcing
+      # it (Loki 3.x): retention_enabled + a delete-request store. Runs
+      # inside the single binary; no extra component.
+      compactor:
+        retention_enabled: true
+        delete_request_store: filesystem
+        # Delete requests (POST /loki/api/v1/delete) sit for this long
+        # before the compactor acts on them, so a mistaken one can be
+        # cancelled. The default of 24h is too slow to be useful when a
+        # stream runaway is what you're deleting.
+        delete_request_cancel_period: 10m
+
+      # Log-based alerting: the ruler runs inside the single binary,
+      # reads LogQL rules the chart's rules sidecar syncs from ConfigMaps
+      # labeled loki_rule (loki-rules.yaml, and every watched fort's
+      # LogStreamSilent from its hub file — same pattern as grafana's
+      # dashboards sidecar), and fires into the central Alertmanager —
+      # the same routing as the metrics side. Discipline: logs alert
+      # on things metrics can't see (error signatures, audit events);
+      # rate-shaped health stays on the Prometheus side so nothing pages
+      # twice.
+      rulerConfig:
+        storage:
+          type: local
+          local:
+            directory: /rules
+        wal:
+          dir: /var/loki/ruler-wal
+        alertmanager_url: http://alertmanager-operated.monitoring-central.svc.cluster.local:9093
+        enable_alertmanager_v2: true
+        # Lets Grafana list the rules under Alerting -> Loki.
+        enable_api: true
+
+    # The sidecar writes synced rule files under the tenant directory the
+    # ruler expects — "fake" is Loki's fixed tenant name with auth disabled.
+    sidecar:
+      rules:
+        folder: /rules/fake
+
+    # The chart defaults the SimpleScalable targets to nonzero replicas and
+    # refuses to render both modes at once — zero them explicitly.
+    read:
+      replicas: 0
+    write:
+      replicas: 0
+    backend:
+      replicas: 0
+
+    # The chunks live on this volume: it IS the log history, sized for
+    # the retention above.
+    singleBinary:
+      replicas: 1
+      persistence:
+        enabled: true
+        storageClass: local-path
+        size: 20Gi
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          memory: 1Gi
+
+    # Slim single-node profile: no nginx gateway in front (Grafana and the
+    # mesh NodePort hit the loki service directly), no memcached pair, no
+    # canary/test scaffolding.
+    gateway:
+      enabled: false
+    chunksCache:
+      enabled: false
+    resultsCache:
+      enabled: false
+    lokiCanary:
+      enabled: false
+    test:
+      enabled: false

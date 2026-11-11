@@ -1,0 +1,120 @@
+# Central Prometheus: remote-write receiver for every edge Prometheus the
+# hub watches, and the estate's whole metric history — local TSDB,
+# retention from [monitoring.hub.retention] metrics. A layer built on top
+# of this one can add an object-store tier behind it (a Thanos sidecar is
+# a patch on this CR); the base keeps the fort's disk as the horizon.
+#
+# It also evaluates the fleet rules: every PrometheusRule labelled
+# monitoring.sfi/scope=central — the label every edge Prometheus
+# excludes, keeping the rule sets disjoint. The dead man's switch of
+# every fort arrives through the hub's subscription (../serves/), so the
+# rules that fire when a cluster goes silent evaluate here, where the
+# silence is visible.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus-central
+  namespace: monitoring-central
+---
+# spec.alerting is operator-implemented as endpoint discovery, so the
+# rule evaluation above needs this one narrow grant: read the endpoints
+# of this namespace, nothing cluster-wide. Scrape targets need none of
+# it — they are static ScrapeConfig CRs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: prometheus-central-alerting
+  namespace: monitoring-central
+rules:
+  - apiGroups: [""]
+    resources: [services, endpoints, pods]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: prometheus-central-alerting
+  namespace: monitoring-central
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: prometheus-central-alerting
+subjects:
+  - kind: ServiceAccount
+    name: prometheus-central
+    namespace: monitoring-central
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: central
+  namespace: monitoring-central
+spec:
+  replicas: 1
+  serviceAccountName: prometheus-central
+  scrapeInterval: 15s
+  evaluationInterval: 60s
+
+  enableRemoteWriteReceiver: true
+
+  # The history lives here: the table's retention, a size cap under the
+  # PVC so the TSDB never fills the volume. Retention on the fort's disk
+  # is not durability — the backups story is a backup of the volume, not
+  # a second copy of the metrics.
+  retention: {{ .Metrics }}
+  retentionSize: 15GB
+  walCompression: true
+  storage:
+    volumeClaimTemplate:
+      spec:
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 20Gi
+
+  # No explicit externalLabels: "prometheus" is operator-reserved (a value
+  # here is ignored), and the operator's injected pair is identity enough.
+
+  # Pin the uid (deployments#379 is the history): nobody is what the
+  # image runs as and what the TSDB on local-path is owned by, so an
+  # image change cannot strand the data.
+  securityContext:
+    runAsUser: 65534
+    runAsGroup: 65534
+    fsGroup: 65534
+    runAsNonRoot: true
+
+  # Static targets as ScrapeConfig CRs, NOT additionalScrapeConfigs: the
+  # served forts' plain-host targets arrive through the subscription, and
+  # an estate's probes sit beside this file with the same label.
+  # In-cluster scraping stays the edge Prometheus's job.
+  scrapeConfigSelector:
+    matchLabels:
+      monitoring.sfi/scope: central
+  scrapeConfigNamespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: monitoring-central
+
+  # The fleet rules (the header says why they evaluate here), pinned to
+  # this namespace via the kube-populated name label.
+  ruleSelector:
+    matchLabels:
+      monitoring.sfi/scope: central
+  ruleNamespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: monitoring-central
+
+  # Fires into the central Alertmanager and only it: Prometheus fans out
+  # to every configured AM, so a second target double-pages.
+  alerting:
+    alertmanagers:
+      - namespace: monitoring-central
+        name: alertmanager-operated
+        port: web
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 1Gi
+    limits:
+      memory: 2Gi

@@ -1,0 +1,17 @@
+# The layer's read rule for the read-only ops identity (forts#169): the
+# core's ops-readonly.yaml stopped naming the monitoring.coreos.com kinds
+# when the edge stack left the core (forts#270). This ClusterRole carries
+# them, labelled sfi.ops/read: "true"; the core's aggregated role
+# ops-ro-layers-read takes it up and binds to kube-system/ops-ro. No
+# binding here — aggregation is the one seam a layer has into that
+# identity, and this file names no service account of the core's.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: monitoring-ops-read
+  labels:
+    sfi.ops/read: "true"
+rules:
+  - apiGroups: [monitoring.coreos.com]
+    resources: [podmonitors, servicemonitors, probes, scrapeconfigs, prometheusrules, prometheuses, alertmanagers, alertmanagerconfigs, thanosrulers]
+    verbs: [get, list, watch]

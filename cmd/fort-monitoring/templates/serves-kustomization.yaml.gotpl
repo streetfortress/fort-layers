@@ -1,0 +1,11 @@
+# The hub {{ .Fort }}'s subscriptions: this estate's own (forts#38),
+# rendered by `fort monitoring scaffold {{ .Fort }}`. A layer built on
+# this one appends its own entries here, one per estate it serves across
+# repos; `fort monitoring check --all` requires this estate's and judges
+# no other.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+{{- range .Serves }}
+  - {{ .Name }}.yaml
+{{- end }}

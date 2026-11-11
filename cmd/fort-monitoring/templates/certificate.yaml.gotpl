@@ -1,0 +1,18 @@
+# Serving cert for the https-{{ .Name }} listener of the monitoring hub's
+# stack (fort-layers; flux/apps/{{ .Fort }}/monitoring-central/), issued by
+# the estate's ClusterIssuer {{ .Issuer }} — the one the Gateway's other
+# certificates name. The hostname must resolve to this fort in the DNS
+# the issuer dials back through; until it does, cert-manager retries
+# harmlessly. fort monitoring scaffold {{ .Fort }} wrote it.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ .Name }}
+  namespace: traefik
+spec:
+  secretName: {{ .Name }}-tls
+  dnsNames:
+    - {{ .Host }}
+  issuerRef:
+    kind: ClusterIssuer
+    name: {{ .Issuer }}

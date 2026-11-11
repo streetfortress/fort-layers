@@ -1,0 +1,13 @@
+# The monitoring layer of this estate (fort-layers; forts' docs/layers.md).
+# fort monitoring init wrote it; the estate refines it in place.
+#
+# The hub is the core's: estate.toml [hubs.monitoring] names the fort
+# this estate's forts render for and push to, and the hub's estate names
+# this one in a [[serves.monitoring]] entry with the two ports (forts'
+# docs/hub.md). This file holds what is the layer's alone: what every
+# cluster fort of this estate pushes. Both streams are on unless a line
+# here says otherwise; a plain fort has no edge and pushes nothing — the
+# hub scrapes it over the mesh instead.
+[push]
+metrics = {{ .Metrics }}   # the edge Prometheus remote-writes to the hub (its NodePort 30990 on the mesh)
+logs = {{ .Logs }}      # fluent-bit ships container, journal and audit logs to the hub's Loki (31100)

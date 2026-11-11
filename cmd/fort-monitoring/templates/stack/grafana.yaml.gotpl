@@ -1,0 +1,128 @@
+# Grafana. The datasource uids are the contract a dashboard names
+# (fenqsyb8rfke8c for metrics, cenug0ko9f4zkd for logs): a layer built on
+# this one that fronts the central Prometheus with a query tier repoints
+# the url and keeps the uid, so no dashboard changes. Dashboards arrive
+# as ConfigMaps labeled grafana_dashboard, one file each; each watched
+# fort's edge Alertmanager arrives as a datasource ConfigMap through the
+# subscription, so a fort joining or leaving never edits this file.
+# Chart defaults: https://github.com/grafana/helm-charts/blob/main/charts/grafana/values.yaml
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: grafana
+  namespace: flux-system
+spec:
+  interval: 1h
+  url: https://grafana.github.io/helm-charts
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: grafana
+  namespace: monitoring-central
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: grafana
+      version: 10.5.15 # app 12.3.1
+      sourceRef:
+        kind: HelmRepository
+        name: grafana
+        namespace: flux-system
+  values:
+    # admin-user / admin-password, written by fort monitoring mint.
+    admin:
+      existingSecret: grafana-admin
+
+    # The chart's init runs as root with capabilities `drop ALL, add
+    # CHOWN` — no DAC_OVERRIDE — so it cannot DESCEND into the 0700 dirs
+    # grafana itself creates (png/csv/pdf) for the recursive chown, and
+    # crashloops on every restart after first boot. The chown is a
+    # uid-migration shim we don't need (grafana owns its data from
+    # birth, fsGroup covers the volume).
+    initChownData:
+      enabled: false
+    # With a RWO PVC, RollingUpdate briefly runs two grafanas on one
+    # sqlite; Recreate is the chart-documented pairing with persistence.
+    # The explicit null is load-bearing: a live Deployment carries
+    # rollingUpdate parameters from its RollingUpdate days, and the API
+    # rejects the merged object unless the apply explicitly clears them.
+    deploymentStrategy:
+      type: Recreate
+      rollingUpdate: null
+
+    grafana.ini:
+      server:
+        root_url: https://grafana.{{ .Hostname }}
+      users:
+        allow_sign_up: false
+
+    datasources:
+      datasources.yaml:
+        apiVersion: 1
+        datasources:
+          - name: Prometheus
+            type: prometheus
+            uid: fenqsyb8rfke8c
+            url: http://prometheus-operated.monitoring-central.svc.cluster.local:9090
+            isDefault: true
+          - name: Loki
+            type: loki
+            uid: cenug0ko9f4zkd
+            url: http://loki.monitoring-central.svc.cluster.local:3100
+          # Alertmanager datasources: Grafana's Alerting → Silences page
+          # only manages AMs registered as datasources — with every AM
+          # registered, Grafana is the single pane for silences across
+          # the estate. Silences are PER-AM: an alert firing from three
+          # edges needs three silences. Central is here; each watched
+          # fort's EDGE Alertmanager arrives through the datasources
+          # sidecar from its hub file.
+          - name: Alertmanager Central
+            type: alertmanager
+            uid: am-central
+            url: http://alertmanager-operated.monitoring-central.svc.cluster.local:9093
+            jsonData:
+              implementation: prometheus
+
+    sidecar:
+      dashboards:
+        enabled: true
+        label: grafana_dashboard
+      # Per-fort datasources (the edge Alertmanagers) as ConfigMaps
+      # labeled grafana_datasource — the same mechanism as dashboards;
+      # the sidecar reloads provisioning on change.
+      datasources:
+        enabled: true
+        label: grafana_datasource
+
+    persistence:
+      enabled: true
+      storageClassName: local-path
+      size: 2Gi
+
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        memory: 512Mi
+---
+# Gateway API handles ingress; listener + cert live in ../gateway/ (fort
+# monitoring scaffold appends them).
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: grafana
+  namespace: monitoring-central
+spec:
+  parentRefs:
+    - name: homelab
+      namespace: traefik
+      sectionName: https-grafana
+  hostnames:
+    - grafana.{{ .Hostname }}
+  rules:
+    - backendRefs:
+        - name: grafana
+          port: 80

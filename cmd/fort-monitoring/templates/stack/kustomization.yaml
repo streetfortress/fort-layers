@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - central-prometheus.yaml
+  - servicemonitors-central.yaml
+  - alertmanager-central.yaml
+  - alertmanager-config.yaml
+  - mesh-services.yaml
+  - grafana.yaml
+  - loki.yaml
+  - loki-rules.yaml
+  - blackbox.yaml
+  # Written by fort monitoring mint (forts.inventory.yaml is the record);
+  # listed-but-absent is the kustomize guard: the PR stays red until the
+  # credential exists.
+  - grafana-admin.sops.yaml

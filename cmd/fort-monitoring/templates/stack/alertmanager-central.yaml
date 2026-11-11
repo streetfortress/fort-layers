@@ -1,0 +1,28 @@
+# Central Alertmanager: receives from the central Prometheus's rule
+# evaluation and from Loki's ruler. Lives in monitoring-central so the
+# shared alertmanager-operated service can't cross-wire it with the
+# fort's edge AM (see namespace.yaml). Config: the committed Secret
+# alertmanager-central (alertmanager-config.yaml beside this file; a
+# notifier is an opt-in edit there, and its secret mounts through
+# spec.secrets).
+apiVersion: monitoring.coreos.com/v1
+kind: Alertmanager
+metadata:
+  name: central
+  namespace: monitoring-central
+spec:
+  replicas: 1
+  retention: 120h
+  storage:
+    volumeClaimTemplate:
+      spec:
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 1Gi
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 128Mi

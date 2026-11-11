@@ -1,0 +1,13 @@
+# The central observability stack gets its own namespace, apart from the
+# per-cluster edge stack in `monitoring`: the operator maintains ONE
+# alertmanager-operated / prometheus-operated service per namespace
+# selecting every AM/Prometheus pod in it, so co-locating edge and
+# central Alertmanagers would fan every edge alert into both (Prometheus
+# pages every AM behind the target service). Rendered by fort monitoring
+# scaffold (fort-layers) from layers/monitoring/forts/<fort>.toml
+# [monitoring.hub]; the forts' files land here through the subscription
+# in ../serves/.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring-central

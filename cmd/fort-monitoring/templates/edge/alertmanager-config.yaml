@@ -1,0 +1,49 @@
+# The edge Alertmanager's config, committed in the clear (fort-layers#3):
+# nothing in the default is a secret, so a route change is a readable PR
+# diff. The operator reads the Secret alertmanager-<name> — here
+# alertmanager-edge — key alertmanager.yaml; a Secret under any other
+# name is silently ignored, which is the trap this committed file removes.
+#
+# The default route delivers to a receiver with no integration: alerts
+# land in the edge Alertmanager's UI on the mesh (http://<mesh ip>:30993,
+# mesh-services-edge.yaml) and nowhere else, so a fresh estate reconciles
+# green with no hand-written file. A notifier is an opt-in edit of this
+# file plus one secret:
+#
+#   1. The secret: one key, `url`. Create it under the shared
+#      infrastructure sops rule — the fort-managed rule, so every
+#      cluster's recipient is on it and mint/dismantle keep it current
+#      (forts' docs/reference/layers.md):
+#        flux/infrastructure/configs/monitoring/alertmanager-webhook.sops.yaml
+#        (kind Secret, name alertmanager-webhook, namespace monitoring,
+#        stringData: url: <the webhook URL>)
+#      and list it in this directory's kustomization.
+#   2. The mount: add to the Alertmanager CR (alertmanager-edge.yaml)
+#        spec.secrets: [alertmanager-webhook]
+#      The mount is part of the opt-in, not the default: a named-but-
+#      missing Secret blocks the pod.
+#   3. The receiver — every common target speaks webhook:
+#        receivers:
+#          - name: notify
+#            webhook_configs:
+#              - url_file: /etc/alertmanager/secrets/alertmanager-webhook/url
+#                send_resolved: true
+#      and route.receiver: notify. Discord is discord_configs with
+#      webhook_url_file, Slack is slack_configs with api_url_file — the
+#      same file, the same mount.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: alertmanager-edge
+  namespace: monitoring
+type: Opaque
+stringData:
+  alertmanager.yaml: |
+    route:
+      receiver: none
+      group_by: [alertname]
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
+    receivers:
+      - name: none

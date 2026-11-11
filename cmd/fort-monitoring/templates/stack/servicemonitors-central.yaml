@@ -1,0 +1,40 @@
+# Scrape the operator-managed half of the central stack: the central
+# Prometheus itself (TSDB head, remote-write receiver counters) and the
+# central Alertmanager. The chart-managed half (loki, blackbox) ships its
+# own ServiceMonitors from values. Without this file nothing in
+# monitoring-central is scraped at all.
+#
+# Scraped by the hub's EDGE Prometheus (serviceMonitorSelector {} across
+# namespaces) and remote-written centrally like every other in-cluster
+# target, so the series carry the hub's cluster label. Selectors are the
+# operator's own `operated-*` service labels; namespaceSelector defaults
+# to this namespace, which keeps the edge stack's identically-named
+# prometheus-operated / alertmanager-operated services in `monitoring`
+# out of scope.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: prometheus-central
+  namespace: monitoring-central
+spec:
+  selector:
+    matchLabels:
+      operated-prometheus: "true"
+  endpoints:
+    - port: web
+      path: /metrics
+      interval: 30s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: alertmanager-central
+  namespace: monitoring-central
+spec:
+  selector:
+    matchLabels:
+      operated-alertmanager: "true"
+  endpoints:
+    - port: web
+      path: /metrics
+      interval: 30s

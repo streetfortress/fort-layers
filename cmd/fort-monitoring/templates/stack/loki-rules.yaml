@@ -1,0 +1,42 @@
+# LogQL alert rules, synced into the Loki ruler by the chart's rules
+# sidecar (any ConfigMap labeled loki_rule; same mechanism as grafana's
+# dashboards sidecar). Prometheus rule-file format, LogQL metric
+# expressions. Log rules cover what metrics can't see — error signatures,
+# pipeline health; rate-shaped service health stays on the
+# Prometheus/ThanosRuler side so nothing pages twice. LogStreamSilent,
+# the log analog of the metrics dead man's switch, is per fort: it
+# arrives through the subscriptions from each fort's hub file. Nothing
+# here names a host. An estate's own log rules go in a file beside this
+# one, with the same label.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loki-ruler-rules
+  namespace: monitoring-central
+  labels:
+    loki_rule: "1"
+data:
+  fleet-rules.yaml: |
+    groups:
+      - name: os-updates
+        rules:
+          # Pull-based nixos-rebuild (the core's auto-rebuild.nix): a
+          # failed switch leaves the host on its previous generation —
+          # atomic-safe, but silent, and silence is exactly the drift
+          # this loop exists to kill. PID1's failure record reaches Loki
+          # through the journald input as {job="systemd"}; cluster and
+          # host are stream labels, so one rule covers every host running
+          # the timer. The 1h window means the alert self-resolves an
+          # hour after firing even though the host is still behind — the
+          # notification is the deliverable here.
+          - alert: NixosUpgradeFailed
+            expr: >-
+              sum by (cluster, host) (
+                count_over_time(
+                  {job="systemd"} |= `nixos-upgrade.service: Failed with result` [1h]
+                )
+              ) > 0
+            labels:
+              severity: warning
+            annotations:
+              summary: nixos-rebuild failed on {{ $labels.host }} ({{ $labels.cluster }}) — host stayed on its previous generation
