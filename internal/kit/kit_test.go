@@ -201,3 +201,45 @@ func TestEditors(t *testing.T) {
 		t.Errorf("NixEnsureBlock: %q %v", b, err)
 	}
 }
+
+func TestKustomizationReaches(t *testing.T) {
+	root := t.TempDir()
+	write := func(path, text string) {
+		t.Helper()
+		full := filepath.Join(root, path)
+		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(full, []byte(text), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Directly listed.
+	write("direct/kustomization.yaml", "resources:\n  - monitoring-central\n  - gateway\n")
+	if !KustomizationReaches(root, "direct", "monitoring-central") {
+		t.Error("a direct entry does not reach")
+	}
+	// Through an overlay: the entry's own kustomization includes the
+	// base directory (#4). File entries and absent directories beside it
+	// are skipped.
+	write("apps/kustomization.yaml", "resources:\n  - sops-canary.yaml\n  - gateway\n  - monitoring-estates\n")
+	write("apps/monitoring-estates/kustomization.yaml", "resources:\n  - ../monitoring-central\n  - thanos.yaml\npatches:\n  - path: sidecar.yaml\n")
+	if !KustomizationReaches(root, "apps", "monitoring-central") {
+		t.Error("an overlay that includes the stack does not reach")
+	}
+	// No path reaches: the overlay includes something else.
+	write("apps/monitoring-estates/kustomization.yaml", "resources:\n  - ../elsewhere\n")
+	if KustomizationReaches(root, "apps", "monitoring-central") {
+		t.Error("reached through an overlay that does not include the stack")
+	}
+	// One hop only: an include of an include does not count.
+	write("apps/monitoring-estates/kustomization.yaml", "resources:\n  - deeper\n")
+	write("apps/monitoring-estates/deeper/kustomization.yaml", "resources:\n  - ../../monitoring-central\n")
+	if KustomizationReaches(root, "apps", "monitoring-central") {
+		t.Error("followed the overlay further than one hop")
+	}
+	// No kustomization at all.
+	if KustomizationReaches(root, "missing", "monitoring-central") {
+		t.Error("reached with no kustomization.yaml")
+	}
+}

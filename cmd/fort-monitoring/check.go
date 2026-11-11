@@ -31,9 +31,11 @@ import (
 //	                   that is gone
 //	each cluster       HUB_MESH_IP in its cluster-vars is the hub's address
 //	the hub fort       the core's declaration and the fort's [monitoring.hub] agree;
-//	                   the stack is there, listed and builds; the subscription is
-//	                   there and listed; the gateway has the name; the host opens
-//	                   the ports; the credential exists (mint)
+//	                   the stack is there, builds, and the apps kustomization
+//	                   reaches it — directly, or through a second layer's overlay
+//	                   entry whose kustomization includes it (#4); the subscription
+//	                   is there and listed; the gateway has the name; the host
+//	                   opens the ports; the credential exists (mint)
 func check(args []string, w io.Writer) error {
 	fs := flag.NewFlagSet("check", flag.ContinueOnError)
 	all := fs.Bool("all", false, "every fort of the estate, and the estate findings")
@@ -338,8 +340,8 @@ func (c checkCtx) hubFindings(fort string, hub *Hub) []kit.Finding {
 	switch {
 	case !kit.Exists(c.root, filepath.Join(stack, "kustomization.yaml")):
 		out = append(out, kit.Finding{Level: kit.Error, Dir: stack, Msg: "missing — [monitoring.hub] promises the central stack; " + scaffold + " renders it"})
-	case !kit.KustomizationLists(c.root, appsDir(fort), stackName):
-		out = append(out, kit.Finding{Level: kit.Error, Dir: apps, Msg: "does not list " + stackName + " — the stack is there and flux never applies it; " + scaffold + " appends it"})
+	case !kit.KustomizationReaches(c.root, appsDir(fort), stackName):
+		out = append(out, kit.Finding{Level: kit.Error, Dir: apps, Msg: "does not reach " + stackName + " — no entry is the stack or includes it, so flux never applies it; " + scaffold + " appends it (a second layer's overlay entry counts when its kustomization includes the stack, #4)"})
 	default:
 		var missing []string
 		for _, f := range stackFileNames() {

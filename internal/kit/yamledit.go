@@ -3,6 +3,7 @@ package kit
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 )
@@ -233,4 +234,41 @@ func KustomizationLists(root, dir, item string) bool {
 		return false
 	}
 	return ListsResource(string(raw), item)
+}
+
+// KustomizationReaches says whether <dir>/kustomization.yaml reaches
+// item: lists it, or lists an entry whose own kustomization includes it
+// — the overlay shape: a second layer's directory includes the base
+// through kustomize and patches it, and the swap point is this entry.
+// One hop, by design: what else the overlay holds is the second layer's
+// own check's work.
+func KustomizationReaches(root, dir, item string) bool {
+	raw, err := os.ReadFile(filepath.Join(root, dir, "kustomization.yaml"))
+	if err != nil {
+		return false
+	}
+	for _, l := range strings.Split(string(raw), "\n") {
+		t := strings.TrimSpace(l)
+		if !strings.HasPrefix(t, "- ") {
+			continue
+		}
+		entry := path.Clean(strings.TrimPrefix(t, "- "))
+		if entry == item {
+			return true
+		}
+		sub, err := os.ReadFile(filepath.Join(root, dir, filepath.FromSlash(entry), "kustomization.yaml"))
+		if err != nil {
+			continue
+		}
+		for _, sl := range strings.Split(string(sub), "\n") {
+			st := strings.TrimSpace(sl)
+			if !strings.HasPrefix(st, "- ") {
+				continue
+			}
+			if path.Clean(path.Join(entry, strings.TrimPrefix(st, "- "))) == item {
+				return true
+			}
+		}
+	}
+	return false
 }

@@ -149,7 +149,7 @@ directory is the record.
 | a cluster's `HUB_MESH_IP` is missing, or is not the hub's address | error: the edge pushes into nothing |
 | `[push]` declares a stream and its render is missing or unlisted | error |
 | the hub fort has no `[monitoring.hub]`; a fort with the table that the core does not name | error |
-| the stack missing, unlisted, lacking a file, or not building (the build waits for the credential) | error |
+| the stack missing, lacking a file, or not building (the build waits for the credential); the apps kustomization does not reach it — no entry is the stack or includes it in its own kustomization (#4) | error |
 | the subscription missing or unlisted | error |
 | the gateway lacks the certificate or the listener, or does not list or patch them | error |
 | the host imports no `monitoring-hub` module or sets no `sfi.monitoring-hub` | error |
@@ -157,13 +157,16 @@ directory is the record.
 
 ## A second layer
 
-This layer is built to be included, not forked (#4 tracks the one check
-affordance). The seams, for a layer that adds an object-store tier,
-cross-estate subscriptions, or a dashboards distribution:
+This layer is built to be included, not forked. The seams, for a layer
+that adds an object-store tier, cross-estate subscriptions, or a
+dashboards distribution:
 
 - The swap point is the apps kustomization: its entry moves from
   `monitoring-central` to an overlay directory that includes it through
-  kustomize and patches it. A Thanos sidecar is a patch on the central
+  kustomize and patches it. This layer's check accepts that shape (#4):
+  the entry counts when its own kustomization includes the stack, one
+  hop deep — what else the overlay holds is the second layer's own
+  check's work. A Thanos sidecar is a patch on the central
   Prometheus CR; a query tier repoints Grafana's datasource url and
   keeps the uid (`fenqsyb8rfke8c` / `cenug0ko9f4zkd` — the contract a
   dashboard names).

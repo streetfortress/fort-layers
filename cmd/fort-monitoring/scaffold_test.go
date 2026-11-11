@@ -597,3 +597,25 @@ func TestDismantleLastFortLeavesAnEmptyList(t *testing.T) {
 		t.Errorf("reopened kustomization:\n%s", k)
 	}
 }
+
+// A second layer swaps the apps entry from the stack to its own overlay
+// directory, which includes the stack through kustomize and patches it
+// (#4). check accepts that shape, one hop deep, and still errors when no
+// include path reaches the stack.
+func TestCheckAcceptsAnOverlayDirectory(t *testing.T) {
+	root := estate(t)
+	scaffoldAll(t, root)
+	apps := filepath.Join(appsDir("hub"), "kustomization.yaml")
+	base := read(t, root, apps)
+	write(t, root, apps, strings.Replace(base, "- "+stackName, "- monitoring-estates", 1))
+	overlay := filepath.Join(appsDir("hub"), "monitoring-estates", "kustomization.yaml")
+	write(t, root, overlay, "apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\nresources:\n  - ../"+stackName+"\npatches:\n  - path: thanos-sidecar.yaml\n")
+	if s, err := gate(t); err != nil {
+		t.Fatalf("overlay: %v\n%s", err, s)
+	}
+	// The overlay includes something else: no path reaches the stack.
+	write(t, root, overlay, "resources:\n  - ../elsewhere\n")
+	if s, err := gate(t); err == nil || !contains(s, "does not reach "+stackName) {
+		t.Errorf("unreached stack:\n%s", s)
+	}
+}
