@@ -182,7 +182,7 @@ dashboards distribution:
 - The dashboards' content: the stack ships the sidecar wiring
   (`grafana_dashboard`-labelled ConfigMaps) and no dashboards yet — a
   bundled set is a separate issue.
-- The push carries no authentication (forts#79): the hub trusts the
+- The push carries no authentication (#9): the hub trusts the
   identity labels the mesh peers stamp. The mesh is the boundary.
 - An object store, long retention tiers, multi-estate tenancy: a second
   layer's (above).
