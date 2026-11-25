@@ -62,11 +62,11 @@ func initCmd(args []string) error {
 	p.Report(os.Stdout, "fort monitoring init")
 	if core, err := loadCore(root); err == nil {
 		if _, ok := core.hub(); !ok {
-			fmt.Fprintln(os.Stdout, "\nestate.toml names no [hubs.monitoring]: nothing pushes and no fort has a file for a hub until it does (forts' docs/hub.md). The edge stack renders either way: each cluster watches itself.")
+			fmt.Fprintln(os.Stdout, "\nEdge monitoring enabled. Configure [hubs.monitoring] in estate.toml for centralized o11y (docs/monitoring.md).")
 		}
 	}
 	if len(p.Actions) > 0 {
-		fmt.Fprintln(os.Stdout, "\nThen: fort monitoring scaffold <fort> for each fort (docs/monitoring.md).")
+		fmt.Fprintln(os.Stdout, "\nNext: fort monitoring scaffold <fort> for each fort ")
 	}
 	return nil
 }

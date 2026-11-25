@@ -16,7 +16,7 @@ one place.
 |---|---|---|
 | `kit.go` | `scaffold.go` repoRoot, `layer.go` | `Root()`: `FORT_ESTATE_ROOT` when the core execs the binary, else the nearest `.git` upward — and either way a directory with an `estate.toml` |
 | `layer.go` | `internal/manifest` Load/LoadAll/Names, `internal/estate` Load | `Layer`: the role's paths under `layers/<role>/`, strict loaders for its `estate.toml` and `forts/<fort>.toml`, `CoreForts` (the names the core declares), `CoreEstate` (the core's file, read loosely for the role's own entries) |
-| `plan.go` | `add.go` action/plan, `layer.go` layerPlan | `Plan`: `New`, `Append`, `Remove`, then `Apply`, `Stage`, `Report` in the marked-tree shape (● ○ ◆ ✗ ·) |
+| `plan.go` | `add.go` action/plan, `layer.go` layerPlan | `Plan`: `New`, `Append`, `Remove`, then `Apply`, `Stage`, `Report` in the marked-tree shape (● ○ ◆ ✗ ·): mark and path per line, no notes |
 | `finding.go` | `check.go` finding/reportFindings | `Finding`, `Report`: info lines first, then ✓ ! ✗, the workflow commands under Gitea Actions, and an unknown level is an error |
 | `sops.go` | `sops.go` | `Secrets` and `Sops`: decrypt, encrypt in place, set, unset, updatekeys, under the estate's config or an explicit one |
 | `yamledit.go` | `yamledit.go` | append a list item, a map entry, a patch, a block — text edits that keep every comment |

@@ -90,7 +90,8 @@ func scaffoldCmd(args []string) error {
 	if err := p.Stage(); err != nil {
 		return err
 	}
-	p.Report(os.Stdout, "fort monitoring scaffold "+fort+"   ("+summary+")")
+	p.Report(os.Stdout, "fort monitoring scaffold "+fort)
+	fmt.Fprintln(os.Stdout, "\n"+summary)
 	reportNext(root, fort)
 	return nil
 }
@@ -357,20 +358,20 @@ func reportNext(root, fort string) {
 	}
 	h, ok := core.hub()
 	if !ok {
-		fmt.Fprintln(os.Stdout, "\nThen: the PR. The edge stack reconciles on every cluster fort; alerts land in the edge Alertmanager's UI until estate.toml names a [hubs.monitoring] (forts' docs/hub.md) or a notifier is opted in (alertmanager-config.yaml says how).")
+		fmt.Fprintln(os.Stdout, "\nNext: Commit and Open a PR.")
 		return
 	}
 	if core.isHubFort(fort) {
 		if hubOf(root, fort) == nil {
-			fmt.Fprintf(os.Stdout, "\nThen: refine %s — the hostname the Gateway serves, the retention — and run fort monitoring scaffold %s again: the stack renders from it.\n", role.FortPath(fort), fort)
+			fmt.Fprintf(os.Stdout, "\nNext: refine %s (hostname, retention) and run fort monitoring scaffold %s again.\n", role.FortPath(fort), fort)
 			return
 		}
-		fmt.Fprintf(os.Stdout, "\nThen: fort monitoring mint %s (the stack's credential), and the PR.\n", fort)
+		fmt.Fprintf(os.Stdout, "\nNext: fort monitoring mint %s (the stack's credential), and open a PR.\n", fort)
 		return
 	}
 	if core.hubLocal(h) {
-		fmt.Fprintf(os.Stdout, "\nThen: the PR. %s applies %s through its subscription to %s/.\n", h.Fort, hubFilePath(h.Fort, fort), hubDir(h.Fort))
+		fmt.Fprintf(os.Stdout, "\nNext: Commit and Open a PR. %s applies %s through its subscription to %s/.\n", h.Fort, hubFilePath(h.Fort, fort), hubDir(h.Fort))
 	} else {
-		fmt.Fprintf(os.Stdout, "\nThen: the PR. %s (%s) applies %s through its subscription to this repo's %s/; that estate serves this one the role.\n", h.Fort, ref(h.Estate), hubFilePath(h.Fort, fort), hubDir(h.Fort))
+		fmt.Fprintf(os.Stdout, "\nNext: Commit and Open a PR. %s (%s) applies %s through its subscription to this repo's %s/; that estate serves this one the role.\n", h.Fort, ref(h.Estate), hubFilePath(h.Fort, fort), hubDir(h.Fort))
 	}
 }

@@ -138,15 +138,17 @@ func (p *Plan) Stage() error {
 	return nil
 }
 
-// Report prints the plan in the marked-tree shape: the title, one line
-// per action and the present paths; with no action, it says so.
+// Report prints the plan in the marked-tree shape: the title, then one
+// line per action — mark and path, no note — and the present paths; with
+// no action, it says so. The notes stay in the plan for the reader of
+// the code: the report is the tree.
 func (p *Plan) Report(w io.Writer, title string) {
 	fmt.Fprintln(w, title)
 	for _, a := range p.Actions {
-		fmt.Fprintf(w, "%c %-40s %s\n", a.Mark, a.Path, a.Note)
+		fmt.Fprintf(w, "%c %s\n", a.Mark, a.Path)
 	}
 	for _, f := range p.Present {
-		fmt.Fprintf(w, "· %-40s already as planned\n", f)
+		fmt.Fprintf(w, "· %s  (already as planned)\n", f)
 	}
 	if len(p.Actions) == 0 {
 		fmt.Fprintln(w, "\nNothing to write.")

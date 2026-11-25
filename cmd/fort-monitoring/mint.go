@@ -102,7 +102,7 @@ func (p *mintPlan) report(w io.Writer) {
 	} else {
 		fmt.Fprintf(w, "● %-52s admin / a generated password\n", rel)
 	}
-	fmt.Fprintln(w, "\nThen: the PR. The gate's kustomize build goes green with the file present.")
+	fmt.Fprintln(w, "\nNext: Commit and Open a PR")
 }
 
 // hex24 is the shape the contracts call hex24: 24 random bytes as hex.
