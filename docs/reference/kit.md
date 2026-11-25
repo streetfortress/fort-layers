@@ -37,7 +37,7 @@ A role is `cmd/fort-<role>/main.go`: a verb switch over `init`,
 the order against the core's verbs), each in the shape of the core's:
 
 - an **author verb** (`init`, `scaffold`, `mint`, `dismantle`) builds a
-  `kit.Plan`, prints it, and with `--write` applies and stages it;
+  `kit.Plan`, applies and stages it, and prints it;
 - the **check** builds `kit.Finding`s per heading and exits non-zero on
   an error, with `GITEA_ACTIONS` turning errors and warnings into
   workflow commands;

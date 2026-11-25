@@ -8,11 +8,11 @@
 // listener, the host's ports, and the stack's credential. The design is
 // docs/monitoring.md.
 //
-//	fort monitoring init [--no-metrics] [--no-logs] [--write]
-//	fort monitoring scaffold <fort> [--write]
+//	fort monitoring init [--no-metrics] [--no-logs]
+//	fort monitoring scaffold <fort>
 //	fort monitoring check [--all | <fort>]
-//	fort monitoring mint <hub> [--write]
-//	fort monitoring dismantle <fort> [--write]
+//	fort monitoring mint <hub>
+//	fort monitoring dismantle <fort>
 package main
 
 import (
@@ -56,17 +56,17 @@ func main() {
 func usage() {
 	fmt.Fprintln(os.Stderr, `usage: fort monitoring <verb> [args]   (fort-monitoring when run by hand)
 
-  Author verbs print the plan in the marked-tree shape; --write lays the
-  files down and stages them. The gate changes nothing. docs/monitoring.md.
+  Author verbs lay the files down, stage them, and print what they did
+  in the marked-tree shape. The gate changes nothing. docs/monitoring.md.
 
-  init [--no-metrics] [--no-logs] [--write]
+  init [--no-metrics] [--no-logs]
       render layers/monitoring/estate.toml: what every cluster fort of
       this estate pushes to its monitoring hub — metrics (the edge
       Prometheus remote-writes, port 30990) and logs (fluent-bit ships
       to the hub's Loki, port 31100), both on unless a flag turns one
       off. The hub itself is the core's: [hubs.monitoring] in estate.toml.
 
-  scaffold <fort> [--write]
+  scaffold <fort>
       render what the fort needs. For a cluster fort, once per estate:
       the edge stack into flux/infrastructure/configs/monitoring/ (the
       edge Prometheus and Alertmanager, node-exporter's scrape seam, the
@@ -95,12 +95,12 @@ func usage() {
       listed. Exits nonzero on any error; annotates for CI when
       GITEA_ACTIONS is set.
 
-  mint <hub> [--write]
+  mint <hub>
       write the stack's credential, after scaffold: grafana-admin. A
       file that exists is kept. The Alertmanager's config is committed
       in the clear; a notifier is an opt-in edit (docs/monitoring.md).
 
-  dismantle <fort> [--write]
+  dismantle <fort>
       the layer's half of a retirement, BEFORE fort dismantle: remove the
       fort's file for the hub and its line, and the fort's [monitoring]
       file. The hub then drops the fort's rules by prune.`)

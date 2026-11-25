@@ -11,7 +11,7 @@ import (
 	"forge.streetfortress.cloud/oss/fort-layers/internal/kit"
 )
 
-// `fort monitoring dismantle <fort> [--write]` runs BEFORE the core's
+// `fort monitoring dismantle <fort>` runs BEFORE the core's
 // dismantle (forts' docs/layers.md), while the fort's manifest still
 // exists: it removes the fort's file for the hub and its line in the
 // directory's kustomization, so the hub drops the fort's rules by prune
@@ -23,7 +23,6 @@ import (
 // not one fort's, and stay.
 func dismantleCmd(args []string) error {
 	fs := flag.NewFlagSet("dismantle", flag.ContinueOnError)
-	write := fs.Bool("write", false, "remove the files and stage the removal (default: print the plan)")
 	var pos []string
 	for len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		pos = append(pos, args[0])
@@ -33,7 +32,7 @@ func dismantleCmd(args []string) error {
 		return err
 	}
 	if len(pos) != 1 || fs.NArg() > 0 {
-		return errors.New("usage: fort monitoring dismantle <fort> [--write]")
+		return errors.New("usage: fort monitoring dismantle <fort>")
 	}
 	fort := pos[0]
 	root, err := kit.Root()
@@ -44,15 +43,13 @@ func dismantleCmd(args []string) error {
 	if err != nil {
 		return err
 	}
-	if *write {
-		if err := p.Apply(); err != nil {
-			return err
-		}
-		if err := p.Stage(); err != nil {
-			return err
-		}
+	if err := p.Apply(); err != nil {
+		return err
 	}
-	p.Report(os.Stdout, "fort monitoring dismantle "+fort, *write)
+	if err := p.Stage(); err != nil {
+		return err
+	}
+	p.Report(os.Stdout, "fort monitoring dismantle "+fort)
 	for _, n := range notes {
 		fmt.Fprintln(os.Stdout, "\n"+n)
 	}

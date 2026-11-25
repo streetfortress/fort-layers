@@ -29,7 +29,7 @@ and put `fort-layers.packages.<system>.fort-monitoring` in the estate flake's `l
 **2. Initialize the layer.**
 
 ```sh
-fort layer add github:streetfortress/fort-layers#monitoring --write -- --write
+fort layer add github:streetfortress/fort-layers#monitoring
 ```
 
 This runs the layer's `init`, which writes `layers/monitoring/estate.toml`: what every cluster fort pushes to the hub (metrics and logs, both on by default). No hub yet? That's fine — the layer says so and the edge stack still works alone.
@@ -37,7 +37,7 @@ This runs the layer's `init`, which writes `layers/monitoring/estate.toml`: what
 **3. Scaffold each fort.**
 
 ```sh
-fort monitoring scaffold <fort> --write
+fort monitoring scaffold <fort>
 ```
 
 Every cluster fort gets the **edge stack**: an edge Prometheus and Alertmanager, the node-exporter scrape seam, the "this cluster is unhealthy" rules, and the controllers they need. The edge stack is self-contained — it evaluates and pages even when the rest of your estate is unreachable.
@@ -53,7 +53,7 @@ fort = "central"
 Re-run scaffold: every watched fort now renders its own dead man's switch into `flux/hub/<hub>/`, and the hub fort renders the central stack — Prometheus receiving every edge's push, Loki, Grafana, a central Alertmanager. Then mint the one credential:
 
 ```sh
-fort monitoring mint <hub> --write
+fort monitoring mint <hub>
 ```
 
 **5. Add the gate.** Your estate's CI runs the core's check already; add the layer's after it:

@@ -35,12 +35,11 @@ func initCmd(args []string) error {
 	fs := flag.NewFlagSet("init", flag.ContinueOnError)
 	noMetrics := fs.Bool("no-metrics", false, "the edge Prometheus of a cluster fort does not remote-write to the hub")
 	noLogs := fs.Bool("no-logs", false, "no fluent-bit: a cluster fort ships no logs to the hub's Loki")
-	write := fs.Bool("write", false, "lay the file down and stage it (default: print the plan)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 	if fs.NArg() > 0 {
-		return errors.New("usage: fort monitoring init [--no-metrics] [--no-logs] [--write]")
+		return errors.New("usage: fort monitoring init [--no-metrics] [--no-logs]")
 	}
 	root, err := kit.Root()
 	if err != nil {
@@ -54,21 +53,19 @@ func initCmd(args []string) error {
 	est := Estate{Push: &Push{Metrics: &view.Metrics, Logs: &view.Logs}}
 	p := &kit.Plan{Root: root}
 	p.New(role.EstatePath(), est.Summary(), content)
-	if *write {
-		if err := p.Apply(); err != nil {
-			return err
-		}
-		if err := p.Stage(); err != nil {
-			return err
-		}
+	if err := p.Apply(); err != nil {
+		return err
 	}
-	p.Report(os.Stdout, "fort monitoring init", *write)
+	if err := p.Stage(); err != nil {
+		return err
+	}
+	p.Report(os.Stdout, "fort monitoring init")
 	if core, err := loadCore(root); err == nil {
 		if _, ok := core.hub(); !ok {
 			fmt.Fprintln(os.Stdout, "\nestate.toml names no [hubs.monitoring]: nothing pushes and no fort has a file for a hub until it does (forts' docs/hub.md). The edge stack renders either way: each cluster watches itself.")
 		}
 	}
-	if *write && len(p.Actions) > 0 {
+	if len(p.Actions) > 0 {
 		fmt.Fprintln(os.Stdout, "\nThen: fort monitoring scaffold <fort> for each fort (docs/monitoring.md).")
 	}
 	return nil

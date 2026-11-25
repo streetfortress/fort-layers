@@ -124,8 +124,8 @@ func TestPlan(t *testing.T) {
 		t.Fatalf("actions %d present %d", len(p.Actions), len(p.Present))
 	}
 	var out bytes.Buffer
-	p.Report(&out, "fort-example scaffold edge", false)
-	for _, want := range []string{"● layers/example/forts/edge.toml", "○ forts/hub.toml", "✗ layers/example/forts/hub.toml", "· layers/example/estate.toml", "Plan only"} {
+	p.Report(&out, "fort-example scaffold edge")
+	for _, want := range []string{"● layers/example/forts/edge.toml", "○ forts/hub.toml", "✗ layers/example/forts/hub.toml", "· layers/example/estate.toml"} {
 		if !strings.Contains(out.String(), want) {
 			t.Errorf("report lacks %q:\n%s", want, out.String())
 		}

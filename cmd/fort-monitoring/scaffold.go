@@ -64,7 +64,6 @@ type hubView struct {
 
 func scaffoldCmd(args []string) error {
 	fs := flag.NewFlagSet("scaffold", flag.ContinueOnError)
-	write := fs.Bool("write", false, "lay the files down and stage them (default: print the plan)")
 	var pos []string
 	for len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		pos = append(pos, args[0])
@@ -74,7 +73,7 @@ func scaffoldCmd(args []string) error {
 		return err
 	}
 	if len(pos) != 1 || fs.NArg() > 0 {
-		return errors.New("usage: fort monitoring scaffold <fort> [--write]")
+		return errors.New("usage: fort monitoring scaffold <fort>")
 	}
 	fort := pos[0]
 	root, err := kit.Root()
@@ -85,16 +84,14 @@ func scaffoldCmd(args []string) error {
 	if err != nil {
 		return err
 	}
-	if *write {
-		if err := p.Apply(); err != nil {
-			return err
-		}
-		if err := p.Stage(); err != nil {
-			return err
-		}
+	if err := p.Apply(); err != nil {
+		return err
 	}
-	p.Report(os.Stdout, "fort monitoring scaffold "+fort+"   ("+summary+")", *write)
-	reportNext(root, fort, *write)
+	if err := p.Stage(); err != nil {
+		return err
+	}
+	p.Report(os.Stdout, "fort monitoring scaffold "+fort+"   ("+summary+")")
+	reportNext(root, fort)
 	return nil
 }
 
@@ -353,10 +350,7 @@ func planPush(root string, p *kit.Plan) error {
 
 // reportNext prints what happens after a written scaffold: who applies
 // the file, and the hub's next step.
-func reportNext(root, fort string, written bool) {
-	if !written {
-		return
-	}
+func reportNext(root, fort string) {
 	core, err := loadCore(root)
 	if err != nil {
 		return
@@ -368,10 +362,10 @@ func reportNext(root, fort string, written bool) {
 	}
 	if core.isHubFort(fort) {
 		if hubOf(root, fort) == nil {
-			fmt.Fprintf(os.Stdout, "\nThen: refine %s — the hostname the Gateway serves, the retention — and run fort monitoring scaffold %s --write again: the stack renders from it.\n", role.FortPath(fort), fort)
+			fmt.Fprintf(os.Stdout, "\nThen: refine %s — the hostname the Gateway serves, the retention — and run fort monitoring scaffold %s again: the stack renders from it.\n", role.FortPath(fort), fort)
 			return
 		}
-		fmt.Fprintf(os.Stdout, "\nThen: fort monitoring mint %s --write (the stack's credential), and the PR.\n", fort)
+		fmt.Fprintf(os.Stdout, "\nThen: fort monitoring mint %s (the stack's credential), and the PR.\n", fort)
 		return
 	}
 	if core.hubLocal(h) {

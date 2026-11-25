@@ -62,7 +62,7 @@ func check(args []string, w io.Writer) error {
 		return err
 	}
 	if !role.Installed(root) {
-		errs += kit.Report(w, role.Dir(), []kit.Finding{{Level: kit.Error, Dir: role.EstatePath(), Msg: "missing — fort monitoring init --write writes it (fort layer add runs it)"}}, annotate)
+		errs += kit.Report(w, role.Dir(), []kit.Finding{{Level: kit.Error, Dir: role.EstatePath(), Msg: "missing — fort monitoring init writes it (fort layer add runs it)"}}, annotate)
 		return fmt.Errorf("%d error(s)", errs)
 	}
 	est, err := loadEstate(root)
@@ -367,7 +367,7 @@ func (c checkCtx) hubFindings(fort string, hub *Hub) []kit.Finding {
 			}
 		}
 		if len(absent) > 0 {
-			out = append(out, kit.Finding{Level: kit.Warning, Dir: stack, Msg: "no " + strings.Join(absent, ", ") + " yet — listed, so kustomize fails until it exists; fort monitoring mint " + fort + " --write"})
+			out = append(out, kit.Finding{Level: kit.Warning, Dir: stack, Msg: "no " + strings.Join(absent, ", ") + " yet — listed, so kustomize fails until it exists; fort monitoring mint " + fort})
 		} else {
 			out = append(out, c.buildFinding(stack, "the stack", "flux would fail the apps layer on it"))
 		}

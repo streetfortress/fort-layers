@@ -49,7 +49,7 @@ func TestInitFlags(t *testing.T) {
 	if err := initCmd([]string{"extra"}); err == nil {
 		t.Error("want an error")
 	}
-	if err := initCmd([]string{"--no-logs", "--write"}); err != nil {
+	if err := initCmd([]string{"--no-logs"}); err != nil {
 		t.Fatal(err)
 	}
 	est, err := loadEstate(root)
@@ -57,7 +57,7 @@ func TestInitFlags(t *testing.T) {
 		t.Errorf("written: %v %+v", err, est)
 	}
 	// A second init never overwrites.
-	if err := initCmd([]string{"--write"}); err != nil {
+	if err := initCmd(nil); err != nil {
 		t.Fatal(err)
 	}
 	if est, _ := loadEstate(root); est.PushLogs() {

@@ -70,11 +70,11 @@ logs = "30d"
 
 | verb | what it does |
 |---|---|
-| `init [--no-metrics] [--no-logs] [--write]` | renders the estate file, both streams on unless a flag turns one off. Says when the core names no hub yet. `fort layer add <url>#monitoring --write -- --write` runs it. |
-| `scaffold <fort> [--write]` | renders the fort's side of the layer (below). Appends and new files, never a rewrite; a re-run fills gaps. |
+| `init [--no-metrics] [--no-logs]` | renders the estate file, both streams on unless a flag turns one off. Says when the core names no hub yet. `fort layer add <url>#monitoring` runs it. |
+| `scaffold <fort>` | renders the fort's side of the layer (below). Appends and new files, never a rewrite; a re-run fills gaps. |
 | `check [--all \| <fort>]` | the layer's gate: the estate's gate runs it after the core's. |
-| `mint <hub> [--write]` | the stack's credential, after scaffold: grafana-admin. A file that exists is kept. |
-| `dismantle <fort> [--write]` | runs before the core's dismantle: removes the fort's file for the hub and its line, and the fort's declaration. The hub drops the fort's rules by prune. |
+| `mint <hub>` | the stack's credential, after scaffold: grafana-admin. A file that exists is kept. |
+| `dismantle <fort>` | runs before the core's dismantle: removes the fort's file for the hub and its line, and the fort's declaration. The hub drops the fort's rules by prune. |
 
 **What `scaffold` renders.** The hub's address on this mesh comes from
 the core: the hub fort's manifest (`mesh_ip`) when the hub is a fort of

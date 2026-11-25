@@ -285,7 +285,7 @@ func TestScaffoldRendersTheHub(t *testing.T) {
 	}
 	// The gate: no error; the credential is the warning mint clears.
 	s, err := gate(t)
-	if err != nil || strings.Contains(s, "✗") || !contains(s, "the edge stack: Prometheus (24h local)", "the central stack: grafana.hub.lofi", "retention 14d, logs 30d", "certificate and listener", "sfi.monitoring-hub: 30990, 31100", "fort monitoring mint hub --write") {
+	if err != nil || strings.Contains(s, "✗") || !contains(s, "the edge stack: Prometheus (24h local)", "the central stack: grafana.hub.lofi", "retention 14d, logs 30d", "certificate and listener", "sfi.monitoring-hub: 30990, 31100", "fort monitoring mint hub") {
 		t.Errorf("check --all: %v\n%s", err, s)
 	}
 }

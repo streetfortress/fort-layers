@@ -14,7 +14,7 @@ import (
 	"forge.streetfortress.cloud/oss/fort-layers/internal/kit"
 )
 
-// `fort monitoring mint <hub> [--write]` writes the stack's one
+// `fort monitoring mint <hub>` writes the stack's one
 // credential, after scaffold rendered the stack
 // (forts.inventory.yaml in the stack directory is the record):
 //
@@ -34,7 +34,6 @@ type mintPlan struct {
 
 func mintCmd(args []string) error {
 	fs := flag.NewFlagSet("mint", flag.ContinueOnError)
-	write := fs.Bool("write", false, "write the file (default: print the plan)")
 	var pos []string
 	for len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		pos = append(pos, args[0])
@@ -44,7 +43,7 @@ func mintCmd(args []string) error {
 		return err
 	}
 	if len(pos) != 1 || fs.NArg() > 0 {
-		return errors.New("usage: fort monitoring mint <hub> [--write]")
+		return errors.New("usage: fort monitoring mint <hub>")
 	}
 	root, err := kit.Root()
 	if err != nil {
@@ -55,12 +54,10 @@ func mintCmd(args []string) error {
 	if err != nil {
 		return err
 	}
-	if *write {
-		if err := p.apply(tool); err != nil {
-			return err
-		}
+	if err := p.apply(tool); err != nil {
+		return err
 	}
-	p.report(os.Stdout, *write)
+	p.report(os.Stdout)
 	return nil
 }
 
@@ -97,7 +94,7 @@ func (p *mintPlan) apply(tool kit.Secrets) error {
 	return tool.GitAdd(rel)
 }
 
-func (p *mintPlan) report(w io.Writer, written bool) {
+func (p *mintPlan) report(w io.Writer) {
 	fmt.Fprintf(w, "fort monitoring mint %s   (the hub's credential)\n", p.fort)
 	rel := filepath.Join(stackDir(p.fort), stackSecrets[0])
 	if p.present {
@@ -105,11 +102,7 @@ func (p *mintPlan) report(w io.Writer, written bool) {
 	} else {
 		fmt.Fprintf(w, "● %-52s admin / a generated password\n", rel)
 	}
-	if !written {
-		fmt.Fprintln(w, "\nPlan only; --write writes and encrypts the file.")
-	} else {
-		fmt.Fprintln(w, "\nThen: the PR. The gate's kustomize build goes green with the file present.")
-	}
+	fmt.Fprintln(w, "\nThen: the PR. The gate's kustomize build goes green with the file present.")
 }
 
 // hex24 is the shape the contracts call hex24: 24 random bytes as hex.

@@ -30,8 +30,7 @@ type Action struct {
 	Edit    func(string) (string, error)
 }
 
-// Plan is what an author verb prints, and with --write applies and
-// stages: the actions, and the paths already as planned (Present), so
+// Plan is what an author verb applies, stages and prints: the actions, and the paths already as planned (Present), so
 // a re-run is a no-op there and says so.
 type Plan struct {
 	Root    string
@@ -140,9 +139,8 @@ func (p *Plan) Stage() error {
 }
 
 // Report prints the plan in the marked-tree shape: the title, one line
-// per action, the present paths, and what --write would do when it
-// was not given.
-func (p *Plan) Report(w io.Writer, title string, written bool) {
+// per action and the present paths; with no action, it says so.
+func (p *Plan) Report(w io.Writer, title string) {
 	fmt.Fprintln(w, title)
 	for _, a := range p.Actions {
 		fmt.Fprintf(w, "%c %-40s %s\n", a.Mark, a.Path, a.Note)
@@ -150,11 +148,7 @@ func (p *Plan) Report(w io.Writer, title string, written bool) {
 	for _, f := range p.Present {
 		fmt.Fprintf(w, "· %-40s already as planned\n", f)
 	}
-	if !written {
-		if len(p.Actions) == 0 {
-			fmt.Fprintln(w, "\nNothing to write.")
-			return
-		}
-		fmt.Fprintln(w, "\nPlan only; --write lays the files down and stages them.")
+	if len(p.Actions) == 0 {
+		fmt.Fprintln(w, "\nNothing to write.")
 	}
 }
