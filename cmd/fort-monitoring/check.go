@@ -114,7 +114,7 @@ type checkCtx struct {
 // the strays and the orphans, the build of the hub's directory, and the
 // hub fort's declarations at both ends.
 func (c checkCtx) estateFindings() []kit.Finding {
-	out := []kit.Finding{{Level: kit.OK, Dir: role.EstatePath(), Msg: c.est.Summary()}}
+	out := []kit.Finding{{Level: kit.Info, Dir: "push", Msg: c.est.PushList()}}
 	declared, err := role.FortNames(c.root)
 	if err != nil {
 		return append(out, kit.Finding{Level: kit.Error, Dir: role.FortsDir(), Msg: err.Error()})
@@ -147,7 +147,7 @@ func (c checkCtx) estateFindings() []kit.Finding {
 		case !kit.KustomizationLists(c.root, filepath.Dir(configsKust), "monitoring"):
 			out = append(out, kit.Finding{Level: kit.Error, Dir: configsKust, Msg: "does not list monitoring — the edge stack is there and flux never applies it; " + scaffoldAny + " appends it"})
 		default:
-			out = append(out, kit.Finding{Level: kit.OK, Dir: monitoringConfigs, Msg: "the edge stack: Prometheus (24h local), Alertmanager (committed config), node-exporter, the rules, the ops read rule"})
+			out = append(out, kit.Finding{Level: kit.OK, Dir: monitoringConfigs, Msg: "the edge stack is rendered and listed"})
 		}
 		for _, ctrl := range edgeControllers {
 			dir := filepath.Join(controllersDir, ctrl.name)
@@ -165,7 +165,7 @@ func (c checkCtx) estateFindings() []kit.Finding {
 
 	out = append(out, c.hubDeclarationFindings(declared)...)
 	if !c.hasHub {
-		return append(out, kit.Finding{Level: kit.OK, Dir: "estate.toml", Msg: "no [hubs.monitoring]: no fort's file for a hub, no push, and no dead man's switch for any of them — the edge Alertmanager is the only alerting"})
+		return append(out, kit.Finding{Level: kit.Info, Dir: "hub", Msg: "none — the edge Alertmanager is the only alerting"})
 	}
 	if c.hubErr != nil {
 		return append(out, kit.Finding{Level: kit.Error, Dir: "estate.toml", Msg: c.hubErr.Error()})
@@ -174,7 +174,7 @@ func (c checkCtx) estateFindings() []kit.Finding {
 	if !c.core.hubLocal(c.hub) {
 		where = "in " + ref(c.hub.Estate) + ", through the link"
 	}
-	out = append(out, kit.Finding{Level: kit.OK, Dir: "estate.toml", Msg: fmt.Sprintf("[hubs.monitoring] %s at %s (%s)", c.hub.Fort, c.hubIP, where)})
+	out = append(out, kit.Finding{Level: kit.Info, Dir: "hub", Msg: fmt.Sprintf("%s at %s (%s)", c.hub.Fort, c.hubIP, where)})
 
 	// Orphans: a file in the hub's directory for a fort with no manifest.
 	entries, _ := os.ReadDir(filepath.Join(c.root, hubDir(c.hub.Fort)))
@@ -205,7 +205,7 @@ func (c checkCtx) estateFindings() []kit.Finding {
 		case !strings.Contains(string(raw), "path: "+pushFile):
 			out = append(out, kit.Finding{Level: kit.Error, Dir: kust, Msg: "does not list " + pushFile + " under patches — the patch is there and kustomize never applies it; fort monitoring scaffold <fort> appends it"})
 		default:
-			out = append(out, kit.Finding{Level: kit.OK, Dir: patch, Msg: "the edge Prometheus remote-writes to http://${" + hubVar + "}:30990, listed"})
+			out = append(out, kit.Finding{Level: kit.OK, Dir: patch, Msg: "the edge Prometheus pushes metrics to the hub"})
 		}
 	}
 	if anyCluster && c.est.PushLogs() {
@@ -216,7 +216,7 @@ func (c checkCtx) estateFindings() []kit.Finding {
 		case !kit.KustomizationLists(c.root, controllersDir, fluentBitName):
 			out = append(out, kit.Finding{Level: kit.Error, Dir: filepath.Join(controllersDir, "kustomization.yaml"), Msg: "does not list " + fluentBitName + " — the controller is there and flux never applies it; fort monitoring scaffold <fort> appends it"})
 		default:
-			out = append(out, kit.Finding{Level: kit.OK, Dir: fluentBitDir, Msg: "fluent-bit ships to http://${" + hubVar + "}:31100, listed"})
+			out = append(out, kit.Finding{Level: kit.OK, Dir: fluentBitDir, Msg: "fluent-bit pushes logs to the hub"})
 		}
 	}
 	return out
@@ -260,7 +260,7 @@ func (c checkCtx) buildFinding(dir, ok, bad string) kit.Finding {
 	if _, err := cmd.Output(); err != nil {
 		return kit.Finding{Level: kit.Error, Dir: dir, Msg: "kustomize build: " + kit.LastLine(stderr.String()) + " — " + bad}
 	}
-	return kit.Finding{Level: kit.OK, Dir: dir, Msg: "kustomize build (" + ok + ")"}
+	return kit.Finding{Level: kit.OK, Dir: dir, Msg: dir + " builds (" + ok + ")"}
 }
 
 // fortFindings is one fort: its declaration, its file for the hub, its
@@ -273,7 +273,7 @@ func (c checkCtx) fortFindings(fort string) []kit.Finding {
 		return []kit.Finding{{Level: kit.Error, Dir: filepath.Join(kit.CoreFortsDir, fort+".toml"), Msg: "no such fort in the core"}}
 	}
 	if !c.hasHub {
-		return []kit.Finding{{Level: kit.OK, Dir: role.FortPath(fort), Msg: "no hub to render for (estate.toml names no [hubs.monitoring]); the edge stack is the estate finding"}}
+		return nil // the estate's hub fact says it
 	}
 	if c.hubErr != nil {
 		return nil // said once, in the estate findings
@@ -304,7 +304,7 @@ func (c checkCtx) fortFindings(fort string) []kit.Finding {
 	case !kit.ListsResource(string(kust), fort+".yaml"):
 		out = append(out, kit.Finding{Level: kit.Error, Dir: hubKustomization(c.hub.Fort), Msg: "does not list " + fort + ".yaml — the file exists and the hub's flux never applies it; fort monitoring scaffold " + fort + " adds the line"})
 	default:
-		out = append(out, kit.Finding{Level: kit.OK, Dir: rel, Msg: note})
+		out = append(out, kit.Finding{Level: kit.OK, Dir: rel, Msg: "hub file " + rel + ": " + note})
 	}
 	if cf.IsCluster() {
 		vars := clusterVarsPath(fort)
@@ -320,7 +320,7 @@ func (c checkCtx) fortFindings(fort string) []kit.Finding {
 			case got != c.hubIP:
 				out = append(out, kit.Finding{Level: kit.Error, Dir: vars, Msg: fmt.Sprintf("%s is %s, and the hub's address on this mesh is %s — the edge pushes into nothing; the file is the estate's, correct the line", hubVar, got, c.hubIP)})
 			default:
-				out = append(out, kit.Finding{Level: kit.OK, Dir: vars, Msg: hubVar + " " + got})
+				out = append(out, kit.Finding{Level: kit.OK, Dir: vars, Msg: hubVar + " is " + got})
 			}
 		}
 	}
@@ -358,7 +358,7 @@ func (c checkCtx) hubFindings(fort string, hub *Hub) []kit.Finding {
 		if len(missing) > 0 {
 			out = append(out, kit.Finding{Level: kit.Error, Dir: stack, Msg: "lacks " + strings.Join(missing, ", ") + " — " + scaffold + " fills the gap"})
 		} else if !legacy {
-			out = append(out, kit.Finding{Level: kit.OK, Dir: stack, Msg: "the central stack: grafana." + hub.Hostname + "; retention " + hub.RetMetrics() + ", logs " + hub.RetLogs()})
+			out = append(out, kit.Finding{Level: kit.OK, Dir: stack, Msg: "the central stack at " + stack + " (grafana." + hub.Hostname + ")"})
 		}
 		var absent []string
 		for _, s := range stackSecrets {
@@ -385,7 +385,7 @@ func (c checkCtx) hubFindings(fort string, hub *Hub) []kit.Finding {
 		case !kit.KustomizationLists(c.root, appsDir(fort), servesName):
 			out = append(out, kit.Finding{Level: kit.Error, Dir: apps, Msg: "does not list " + servesName + " — the subscription exists and flux never applies it; " + scaffold + " adds the line"})
 		default:
-			out = append(out, kit.Finding{Level: kit.OK, Dir: rel, Msg: "this estate's own forts: " + hubDir(fort) + "/ through the flux-system source"})
+			out = append(out, kit.Finding{Level: kit.OK, Dir: rel, Msg: "the subscription for this estate's forts"})
 		}
 	}
 	// The gateway.
@@ -411,7 +411,7 @@ func (c checkCtx) hubFindings(fort string, hub *Hub) []kit.Finding {
 		if len(gaps) > 0 {
 			out = append(out, kit.Finding{Level: kit.Error, Dir: gw, Msg: strings.Join(gaps, ", ") + " — " + scaffold + " appends them"})
 		} else {
-			out = append(out, kit.Finding{Level: kit.OK, Dir: gw, Msg: "grafana." + hub.Hostname + ": certificate and listener"})
+			out = append(out, kit.Finding{Level: kit.OK, Dir: gw, Msg: "the gateway has the certificate and listener for grafana." + hub.Hostname})
 		}
 	}
 	// The host.
@@ -423,7 +423,7 @@ func (c checkCtx) hubFindings(fort string, hub *Hub) []kit.Finding {
 	case !strings.Contains(string(raw), ".nixosModules.monitoring-hub") || !kit.NixSetsAttr(string(raw), "sfi.monitoring-hub"):
 		out = append(out, kit.Finding{Level: kit.Error, Dir: hostNix, Msg: fmt.Sprintf("the host imports no monitoring-hub module or sets no sfi.monitoring-hub — %d and %d stay closed on the mesh; %s", portMetrics, portLogs, scaffold)})
 	default:
-		out = append(out, kit.Finding{Level: kit.OK, Dir: hostNix, Msg: fmt.Sprintf("sfi.monitoring-hub: %d, %d on the mesh interface", portMetrics, portLogs)})
+		out = append(out, kit.Finding{Level: kit.OK, Dir: hostNix, Msg: fmt.Sprintf("the host opens %d and %d on the mesh", portMetrics, portLogs)})
 	}
 	return out
 }

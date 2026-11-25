@@ -44,8 +44,8 @@ type Push struct {
 func (e Estate) PushMetrics() bool { return e.Push == nil || e.Push.Metrics == nil || *e.Push.Metrics }
 func (e Estate) PushLogs() bool    { return e.Push == nil || e.Push.Logs == nil || *e.Push.Logs }
 
-// Summary is the one line a report prints for the estate's push.
-func (e Estate) Summary() string {
+// PushList is the streams the estate pushes to the hub, for the report.
+func (e Estate) PushList() string {
 	var on []string
 	if e.PushMetrics() {
 		on = append(on, "metrics")
@@ -54,10 +54,13 @@ func (e Estate) Summary() string {
 		on = append(on, "logs")
 	}
 	if len(on) == 0 {
-		return "push: nothing — the hub watches the forts and receives no stream"
+		return "nothing — the hub watches the forts and receives no stream"
 	}
-	return "push: " + strings.Join(on, ", ")
+	return strings.Join(on, ", ")
 }
+
+// Summary is the one line init prints for the estate's push.
+func (e Estate) Summary() string { return "push: " + e.PushList() }
 
 // Fort is layers/monitoring/forts/<fort>.toml.
 type Fort struct {

@@ -149,11 +149,11 @@ func TestPlan(t *testing.T) {
 
 func TestReport(t *testing.T) {
 	var out bytes.Buffer
-	n := Report(&out, "hub", []Finding{{OK, "layers/x", "fine"}, {Warning, "a", "w"}, {Error, "b", "e"}, {"typo", "c", "lost?"}}, true)
+	n := Report(&out, "hub", []Finding{{Info, "k", "v"}, {OK, "layers/x", "fine"}, {Warning, "a", "w"}, {Error, "b", "e"}, {"typo", "c", "lost?"}}, true)
 	if n != 2 {
 		t.Errorf("errors: %d", n)
 	}
-	for _, want := range []string{"== hub", "✓ layers/x", "! a: w", "::warning::a: w", "✗ b: e", "::error::b: e", "unknown finding level"} {
+	for _, want := range []string{"== hub", "k  v", "✓ fine", "! a: w", "::warning::a: w", "✗ b: e", "::error::b: e", "unknown finding level"} {
 		if !strings.Contains(out.String(), want) {
 			t.Errorf("lacks %q:\n%s", want, out.String())
 		}

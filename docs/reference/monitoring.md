@@ -135,13 +135,19 @@ directory is the record.
 
 **What `check` reads.** The tree alone.
 
+The output follows the core's `fort check` (forts#268): success is terse,
+failure is verbose. An info line is a fact (`push`, `hub`) with no mark,
+and it cannot fail. A `✓` marks a check that could have failed, with a
+short message. A heading with no findings prints no header. Error and
+warning lines do not change.
+
 | finding | level |
 |---|---|
 | the estate file or a fort file does not parse | error |
 | a fort file for a fort the core does not declare | error |
 | the edge stack missing a file, or unlisted; a controller missing or unlisted | error |
 | `ops-readonly.yaml` carries no `ops-ro-layers-read` | error: the layer's labelled read rule has no taker (an estate rendered before forts#169 adds it by hand) |
-| no `[hubs.monitoring]` in the core | ok, said once: no push, no file, the edge Alertmanager is the only alerting |
+| no `[hubs.monitoring]` in the core | info, said once (`hub  none`): no push, no file, the edge Alertmanager is the only alerting |
 | the hub's address on this mesh does not resolve | error |
 | a core fort with no declaration, or no file in `flux/hub/<hub>/`, or a file the directory does not list | error: a fort with no dead man's switch is the silent failure this layer exists to catch |
 | a file in `flux/hub/<hub>/` for a fort with no manifest | error: a retired fort's rules would page for a cluster that is gone |

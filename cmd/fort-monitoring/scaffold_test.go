@@ -285,7 +285,7 @@ func TestScaffoldRendersTheHub(t *testing.T) {
 	}
 	// The gate: no error; the credential is the warning mint clears.
 	s, err := gate(t)
-	if err != nil || strings.Contains(s, "✗") || !contains(s, "the edge stack: Prometheus (24h local)", "the central stack: grafana.hub.lofi", "retention 14d, logs 30d", "certificate and listener", "sfi.monitoring-hub: 30990, 31100", "fort monitoring mint hub") {
+	if err != nil || strings.Contains(s, "✗") || !contains(s, "the edge stack is rendered", "the central stack at", "grafana.hub.lofi", "certificate and listener", "opens 30990 and 31100", "fort monitoring mint hub") {
 		t.Errorf("check --all: %v\n%s", err, s)
 	}
 }
@@ -313,7 +313,7 @@ func TestScaffoldWithoutAHub(t *testing.T) {
 	if kit.Exists(root, role.FortPath("edge")) || kit.Exists(root, hubDir("hub")) {
 		t.Error("a hub-shaped render with no hub")
 	}
-	if s, err := gate(t); err != nil || strings.Contains(s, "✗") || !contains(s, "no [hubs.monitoring]", "the edge Alertmanager is the only alerting", "the edge stack: Prometheus (24h local)") {
+	if s, err := gate(t); err != nil || strings.Contains(s, "✗") || !contains(s, "hub   none", "the edge Alertmanager is the only alerting", "the edge stack is rendered") {
 		t.Errorf("check --all: %v\n%s", err, s)
 	}
 }
@@ -377,7 +377,7 @@ func TestScaffoldWithPushOff(t *testing.T) {
 		t.Errorf("the patch entry with [push] off:\n%s", s)
 	}
 	s, err := gate(t)
-	if err == nil || !contains(s, "push: nothing", "✗ "+hubFilePath("hub", "hub")) || contains(s, pushFile) || contains(s, "fluent-bit") {
+	if err == nil || !contains(s, "push  nothing", "✗ "+hubFilePath("hub", "hub")) || contains(s, pushFile) || contains(s, "fluent-bit") {
 		t.Errorf("check --all: %v\n%s", err, s)
 	}
 }
@@ -482,7 +482,7 @@ func TestCheckFindsEveryGap(t *testing.T) {
 	// No hub in the core: one ok line, and the strays still count.
 	write(t, root, "estate.toml", "name = \"test\"\n[source]\nrepo = \""+testRepo+"\"\n")
 	write(t, root, role.FortPath("edge"), hubFile)
-	if s, err := gate(t); err == nil || !contains(s, "no [hubs.monitoring]", "[monitoring.hub] on a fort estate.toml does not name") {
+	if s, err := gate(t); err == nil || !contains(s, "hub   none", "[monitoring.hub] on a fort estate.toml does not name") {
 		t.Errorf("no hub: %v\n%s", err, s)
 	}
 }
