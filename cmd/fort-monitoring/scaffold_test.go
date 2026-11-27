@@ -627,3 +627,29 @@ func TestCheckAcceptsAnOverlayDirectory(t *testing.T) {
 		t.Errorf("unreached stack:\n%s", s)
 	}
 }
+
+// The hub fort's first run writes its file and says to refine it; the
+// second run renders the stack and says to mint.
+func TestReportNextFollowsThePlan(t *testing.T) {
+	root := estate(t)
+	next := func(fileWritten bool) string {
+		r, w, err := os.Pipe()
+		if err != nil {
+			t.Fatal(err)
+		}
+		old := os.Stdout
+		os.Stdout = w
+		reportNext(root, "hub", fileWritten)
+		os.Stdout = old
+		w.Close()
+		var b bytes.Buffer
+		b.ReadFrom(r)
+		return b.String()
+	}
+	if s := next(true); !contains(s, "refine", "scaffold hub again") {
+		t.Errorf("first run: %q", s)
+	}
+	if s := next(false); !contains(s, "fort monitoring mint hub") {
+		t.Errorf("second run: %q", s)
+	}
+}

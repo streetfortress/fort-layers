@@ -80,6 +80,9 @@ func scaffoldCmd(args []string) error {
 	if err != nil {
 		return err
 	}
+	// Read before the plan applies: a hub fort's file is written by this run
+	// exactly when it was absent, and the report must say so.
+	fileWritten := !kit.Exists(root, role.FortPath(fort))
 	p, summary, err := planScaffold(root, fort)
 	if err != nil {
 		return err
@@ -92,7 +95,7 @@ func scaffoldCmd(args []string) error {
 	}
 	p.Report(os.Stdout, "fort monitoring scaffold "+fort)
 	fmt.Fprintln(os.Stdout, "\n"+summary)
-	reportNext(root, fort)
+	reportNext(root, fort, fileWritten)
 	return nil
 }
 
@@ -350,8 +353,9 @@ func planPush(root string, p *kit.Plan) error {
 }
 
 // reportNext prints what happens after a written scaffold: who applies
-// the file, and the hub's next step.
-func reportNext(root, fort string) {
+// the file, and the hub's next step. fileWritten is the plan's fact: this
+// run wrote the fort's file, so a hub fort stops for the refinement.
+func reportNext(root, fort string, fileWritten bool) {
 	core, err := loadCore(root)
 	if err != nil {
 		return
@@ -362,7 +366,7 @@ func reportNext(root, fort string) {
 		return
 	}
 	if core.isHubFort(fort) {
-		if hubOf(root, fort) == nil {
+		if fileWritten {
 			fmt.Fprintf(os.Stdout, "\nNext: refine %s (hostname, retention) and run fort monitoring scaffold %s again.\n", role.FortPath(fort), fort)
 			return
 		}
