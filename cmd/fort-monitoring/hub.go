@@ -207,7 +207,7 @@ func planHub(root, fort string, core coreEstate, hub *Hub, p *kit.Plan) error {
 			}
 			listener := "listener-" + g.name + ".yaml"
 			if !strings.Contains(s, "path: "+listener) {
-				s = kit.AppendPatch(s, "# One JSON6902 patch per service appends its https listener to the\n# Gateway: listeners live in a single object, and a strategic-merge\n# patch cannot append to a CRD list.\n", listener, "gateway.networking.k8s.io", "v1", "Gateway", "homelab", "traefik")
+				s = kit.AppendPatch(s, "# One JSON6902 patch per service appends its https listener to the\n# Gateway: listeners live in a single object, and a strategic-merge\n# patch cannot append to a CRD list.\n", listener, "gateway.networking.k8s.io", "v1", "Gateway", "edge", "traefik")
 			}
 		}
 		return s, nil

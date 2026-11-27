@@ -117,7 +117,7 @@ metadata:
   namespace: monitoring-central
 spec:
   parentRefs:
-    - name: homelab
+    - name: edge
       namespace: traefik
       sectionName: https-grafana
   hostnames:
