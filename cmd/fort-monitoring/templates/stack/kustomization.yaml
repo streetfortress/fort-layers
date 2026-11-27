@@ -15,3 +15,18 @@ resources:
   # listed-but-absent is the kustomize guard: the PR stays red until the
   # credential exists.
   - grafana-admin.sops.yaml
+
+# The bundled dashboards: one ConfigMap each, labeled for Grafana's
+# sidecar. The JSON names the datasource uids in grafana.yaml. A layer
+# that ships a fuller set patches these out of the list.
+generatorOptions:
+  disableNameSuffixHash: true
+  labels:
+    grafana_dashboard: "1"
+configMapGenerator:
+  - name: dashboard-estate-overview
+    files:
+      - dashboards/estate-overview.json
+  - name: dashboard-fort-overview
+    files:
+      - dashboards/fort-overview.json

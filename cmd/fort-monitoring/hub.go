@@ -58,6 +58,8 @@ var stackFiles = []struct{ name, note string }{
 	{"loki.yaml", "single binary, chunks on the filesystem, the OTLP label set"},
 	{"loki-rules.yaml", "the estate's log rules: NixosUpgradeFailed"},
 	{"blackbox.yaml", "the prober; probes are the estate's ScrapeConfigs"},
+	{"dashboards/estate-overview.json", "Grafana dashboard: the estate's revisions, alerts, mesh and ingest"},
+	{"dashboards/fort-overview.json", "Grafana dashboard: one fort's host, its units and its logs"},
 	{"forts.inventory.yaml", "grafana-admin's seeding record"},
 	{"kustomization.yaml", "the list; grafana-admin.sops.yaml listed-but-absent until mint"},
 }

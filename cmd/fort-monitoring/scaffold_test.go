@@ -248,6 +248,14 @@ func TestScaffoldRendersTheHub(t *testing.T) {
 	if s := read(t, root, filepath.Join(stackDir("hub"), "grafana.yaml")); !contains(s, "root_url: https://grafana.hub.lofi", "- grafana.hub.lofi", "uid: fenqsyb8rfke8c", "prometheus-operated.monitoring-central") {
 		t.Errorf("grafana:\n%s", s)
 	}
+	for _, d := range []string{"estate-overview", "fort-overview"} {
+		if s := read(t, root, filepath.Join(stackDir("hub"), "dashboards", d+".json")); !contains(s, `"uid": "`+d+`"`, "fenqsyb8rfke8c") {
+			t.Errorf("dashboard %s:\n%s", d, s)
+		}
+		if s := read(t, root, filepath.Join(stackDir("hub"), "kustomization.yaml")); !contains(s, "dashboards/"+d+".json", "grafana_dashboard:") {
+			t.Errorf("stack kustomization lacks dashboard %s:\n%s", d, s)
+		}
+	}
 	if s := read(t, root, filepath.Join(stackDir("hub"), "alertmanager-config.yaml")); !contains(s, "name: alertmanager-central", "receiver: none", "flux/apps/hub/monitoring-central/alertmanager-webhook.sops.yaml") {
 		t.Errorf("central alertmanager config:\n%s", s)
 	}

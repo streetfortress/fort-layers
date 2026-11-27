@@ -98,7 +98,7 @@ missing entry is refused by name, not rendered empty.
 
 | renders | what |
 |---|---|
-| `● flux/apps/<hub>/monitoring-central/` | the central stack: the namespace `monitoring-central` (apart from the edge's `monitoring`, so the operator's per-namespace services cannot fan every edge alert into both); the central Prometheus — remote-write receiver, the history at the table's retention, and the fleet-rule evaluation (`monitoring.sfi/scope: central`, the label every edge excludes); the central Alertmanager and its committed config; the two mesh NodePorts; Grafana at `grafana.<hostname>`, the edge Alertmanagers arriving as datasources; Loki on the filesystem with the OTLP label set; the log rules; blackbox, with no targets; the central ServiceMonitors; `forts.inventory.yaml`. `grafana-admin.sops.yaml` is listed and absent until mint. |
+| `● flux/apps/<hub>/monitoring-central/` | the central stack: the namespace `monitoring-central` (apart from the edge's `monitoring`, so the operator's per-namespace services cannot fan every edge alert into both); the central Prometheus — remote-write receiver, the history at the table's retention, and the fleet-rule evaluation (`monitoring.sfi/scope: central`, the label every edge excludes); the central Alertmanager and its committed config; the two mesh NodePorts; Grafana at `grafana.<hostname>`, the edge Alertmanagers arriving as datasources; Loki on the filesystem with the OTLP label set; the log rules; the two bundled dashboards, Estate Overview and Fort Overview, as `grafana_dashboard` ConfigMaps from `dashboards/*.json`; blackbox, with no targets; the central ServiceMonitors; `forts.inventory.yaml`. `grafana-admin.sops.yaml` is listed and absent until mint. |
 | `● flux/apps/<hub>/serves/<estate>.yaml` | the subscription: `flux/hub/<hub>/` of this repo through the flux-system source, applied as a ServiceAccount that writes PrometheusRule, ScrapeConfig and ConfigMap in `monitoring-central` and nothing else |
 | `○ flux/apps/<hub>/kustomization.yaml` | + `monitoring-central`, + `serves` |
 | `○ flux/apps/<hub>/gateway/` | `certificate-grafana.yaml`, `listener-grafana.yaml`; the issuer is the one the Gateway's other certificates name (`letsencrypt` when there is none) |
@@ -185,9 +185,10 @@ dashboards distribution:
 
 ## Not in this layer
 
-- The dashboards' content: the stack ships the sidecar wiring
-  (`grafana_dashboard`-labelled ConfigMaps) and no dashboards yet — a
-  bundled set is a separate issue.
+- The Kubernetes dashboard: the stack bundles Estate Overview and Fort
+  Overview. A layer with a fuller set removes the bundled ConfigMaps
+  with a patch, or Grafana shows duplicates (uids `estate-overview`,
+  `fort-overview`).
 - The push carries no authentication (#9): the hub trusts the
   identity labels the mesh peers stamp. The mesh is the boundary.
 - An object store, long retention tiers, multi-estate tenancy: a second
